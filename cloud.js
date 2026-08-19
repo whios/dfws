@@ -2,7 +2,7 @@
 (function () {
   // 文件协议没有可持久化的网页登录来源，不能承载 Supabase 的邮件登录回跳。
   if (window.location.protocol === 'file:') {
-    window.location.replace('https://dfws.vercel.app');
+    window.location.replace('https://dfws.wendywang.club');
     return;
   }
   const config = window.DFWS_SUPABASE;
