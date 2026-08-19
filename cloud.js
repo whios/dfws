@@ -62,5 +62,17 @@
     await getProfile(session.user); showLogin(false); return loadState();
   }
   function queueSync(state) { if (!remoteHasData || !staff()) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => writeState(state).catch((error) => { status('云端同步失败'); console.error(error); }), 600); }
-  window.DfwsCloud = { init, writeState, queueSync, staff };
+  async function listProfiles() {
+    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    const [profilesRes, partnersRes] = await Promise.all([client.from('profiles').select('id, email, display_name, role, partner_id, created_at').order('created_at'), client.from('partners').select('id, owner_name, brand, department').order('brand').order('owner_name')]);
+    if (profilesRes.error) throw profilesRes.error;
+    if (partnersRes.error) throw partnersRes.error;
+    return { profiles: profilesRes.data, partners: partnersRes.data };
+  }
+  async function updateProfile(id, values) {
+    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    const { error } = await client.from('profiles').update(values).eq('id', id);
+    if (error) throw error;
+  }
+  window.DfwsCloud = { init, writeState, queueSync, staff, listProfiles, updateProfile };
 })();
