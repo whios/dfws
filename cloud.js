@@ -6,7 +6,8 @@
     return;
   }
   const config = window.DFWS_SUPABASE;
-  const client = supabase.createClient(config.url, config.publishableKey);
+  // 邮件通常会在默认浏览器打开；implicit 让回跳浏览器可直接建立会话，避免 PKCE 跨浏览器丢失 verifier。
+  const client = supabase.createClient(config.url, config.publishableKey, { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true } });
   let profile = null;
   let remoteHasData = false;
   let syncTimer = null;
