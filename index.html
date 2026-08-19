@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d5b61" />
+    <title>AI伙伴核实管理系统</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="overrides.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">A</span><span>AI伙伴核实</span></div>
+        <nav id="nav" class="nav" aria-label="主导航">
+          <button class="nav-item active" data-view="dashboard">总览看板</button>
+          <button class="nav-item" data-view="assets">资产台账</button>
+          <button class="nav-item" data-view="verify">核验工作台</button>
+          <button class="nav-item" data-view="risks">风险整改</button>
+          <button class="nav-item" data-view="report">汇报导出</button>
+        </nav>
+        <div class="sidebar-foot">验收截止日<br /><strong>2026-09-30</strong></div>
+      </aside>
+      <main class="main">
+        <header class="topbar"><div><p class="eyebrow">四品牌 AI 资产核实</p><h1 id="page-title">总览看板</h1></div><div class="topbar-actions"><span class="save-state" id="save-state">本地数据已保存</span><button class="button secondary" id="reset-demo">恢复演示数据</button></div></header>
+        <section id="dashboard" class="view active"></section>
+        <section id="assets" class="view"></section>
+        <section id="verify" class="view"></section>
+        <section id="risks" class="view"></section>
+        <section id="report" class="view"></section>
+      </main>
+    </div>
+    <dialog id="asset-dialog" class="dialog"><form method="dialog" id="asset-form"><header><h2 id="asset-dialog-title">新增资产</h2><button class="icon-button" value="cancel" aria-label="关闭">x</button></header><div class="form-grid"><label>资产名称<input required name="name" placeholder="例如：客户方案生成 Skill" /></label><label>类型<select name="type"><option>Skill</option><option>智能体</option><option>工作流</option></select></label><label>品牌<select name="brand"><option>先之</option><option>乔邦</option><option>最佳东方</option><option>迈点</option></select></label><label>部门<input required name="department" placeholder="例如：销售部" /></label><label>负责人<input required name="owner" placeholder="姓名" /></label><label>平台<input name="platform" placeholder="例如：WorkBuddy" /></label><label class="full">解决的真实任务<textarea required name="task" placeholder="描述该资产用于解决的实际业务任务"></textarea></label><label>最近30天调用次数<input required min="0" type="number" name="calls" value="0" /></label><label>核验等级<select name="level"><option value="V0">V0 未核实</option><option value="V1">V1 可打开</option><option value="V2">V2 可复用 Skill</option><option value="V3">V3 可运行</option><option value="V4">V4 可推广</option></select></label><label class="full">共享盘证据链接或路径<input name="evidence" placeholder="https://... 或 \\server\share\..." /></label><label class="full">人工审核点<textarea name="review" placeholder="例如：核对客户信息真实性、报价规则与输出格式"></textarea></label></div><footer><button value="cancel" class="button secondary">取消</button><button class="button primary" id="asset-submit" value="default">保存资产</button></footer></form></dialog>
+    <dialog id="risk-dialog" class="dialog"><form method="dialog" id="risk-form"><header><h2>登记风险</h2><button class="icon-button" value="cancel" aria-label="关闭">x</button></header><div class="form-grid"><label>风险类型<select name="kind"><option>无链接/路径</option><option>无真实调用</option><option>数据权限不清</option><option>输出准确性</option><option>重复资产</option><option>无人维护</option></select></label><label>优先级<select name="priority"><option>高</option><option selected>中</option><option>低</option></select></label><label>品牌<select name="brand"><option>先之</option><option>乔邦</option><option>最佳东方</option><option>迈点</option></select></label><label>负责人<input required name="owner" /></label><label>截止日期<input required type="date" name="due" /></label><label>状态<select name="status"><option>待整改</option><option>整改中</option><option>已整改</option></select></label><label class="full">整改说明<textarea required name="note" placeholder="风险表现、核实结论与下一步动作"></textarea></label></div><footer><button value="cancel" class="button secondary">取消</button><button class="button primary" value="default">保存风险</button></footer></form></dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
