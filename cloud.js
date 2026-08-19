@@ -1,10 +1,16 @@
 /* global supabase */
 (function () {
+  // 文件协议没有可持久化的网页登录来源，不能承载 Supabase 的邮件登录回跳。
+  if (window.location.protocol === 'file:') {
+    window.location.replace('https://dfws.vercel.app');
+    return;
+  }
   const config = window.DFWS_SUPABASE;
   const client = supabase.createClient(config.url, config.publishableKey);
   let profile = null;
   let remoteHasData = false;
   let syncTimer = null;
+  const appOrigin = window.location.origin;
   const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id || '');
   const byPartner = (rows) => new Map(rows.map((row) => [`${row.owner_name}|${row.brand}`, row]));
   const staff = () => ['manager', 'brand_admin', 'ai_officer'].includes(profile?.role);
@@ -55,7 +61,9 @@
   }
 
   async function init() {
-    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const email = document.querySelector('#auth-email').value.trim(); const submit = document.querySelector('#auth-submit'); submit.disabled = true; const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } }); submit.disabled = false; document.querySelector('#auth-message').textContent = error ? error.message : '登录链接已发送，请在邮箱中打开。'; });
+    // 邮件链接回到页面时，SDK 写入 session 后刷新为无 token 的地址，再由下方 getSession 完成加载。
+    client.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_IN' && session && !profile) window.setTimeout(() => window.location.replace(window.location.pathname), 0); });
+    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const email = document.querySelector('#auth-email').value.trim(); const submit = document.querySelector('#auth-submit'); submit.disabled = true; const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: appOrigin } }); submit.disabled = false; document.querySelector('#auth-message').textContent = error ? error.message : '登录链接已发送，请在邮箱中打开。'; });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
