@@ -85,3 +85,22 @@
   .review-profile, .review-save { align-items: flex-start; flex-direction: column; gap: 12px; }
   .review-assets { justify-content: flex-start; }
 }
+
+.auth-gate {
+  align-items: center;
+  background: #12383de8;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 10;
+}
+
+.auth-gate.is-hidden { display: none; }
+.auth-panel { background: #fff; border: 1px solid var(--line); border-radius: 7px; max-width: 410px; padding: 28px; width: 100%; }
+.auth-panel h1 { font-size: 22px; margin: 0 0 8px; }
+.auth-panel p { color: var(--muted); margin: 0 0 18px; }
+.auth-panel label { display: grid; font-size: 12px; font-weight: 650; gap: 6px; margin-bottom: 14px; }
+.auth-panel input { border: 1px solid var(--line); border-radius: 5px; font: inherit; padding: 10px; }
+.auth-panel .button { width: 100%; }
