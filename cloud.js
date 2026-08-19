@@ -82,7 +82,21 @@
     const { error } = await client.from('profiles').update(values).eq('id', id);
     if (error) throw error;
   }
+  async function saveReview(owner, values) {
+    const role = profile?.role;
+    if (!['partner', 'manager', 'ai_officer'].includes(role)) throw new Error('当前角色没有点评权限。');
+    const { data: partners, error: partnerError } = await client.from('partners').select('id').eq('owner_name', owner).limit(2);
+    if (partnerError || partners.length !== 1) throw new Error('未找到唯一的伙伴记录，请联系 AI 应用官处理。');
+    const partnerId = partners[0].id;
+    if (role === 'partner' && profile.partner_id !== partnerId) throw new Error('伙伴账号只能填写本人自评。');
+    const payload = { partner_id: partnerId };
+    if (role === 'partner') Object.assign(payload, { self_review: values.self, self_level: values.selfLevel });
+    if (role === 'manager') Object.assign(payload, { manager_review: values.manager, manager_level: values.managerLevel });
+    if (role === 'ai_officer') Object.assign(payload, { officer_review: values.officer, officer_level: values.officerLevel });
+    const { error } = await client.from('reviews').upsert(payload, { onConflict: 'partner_id' });
+    if (error) throw error;
+  }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, readOnly };
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, get role() { return profile?.role; }, readOnly };
 })();
