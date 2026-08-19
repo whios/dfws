@@ -74,5 +74,7 @@
     const { error } = await client.from('profiles').update(values).eq('id', id);
     if (error) throw error;
   }
-  window.DfwsCloud = { init, writeState, queueSync, staff, listProfiles, updateProfile };
+  // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
+  const canBootstrap = () => Boolean(profile) && staff() && !remoteHasData;
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile };
 })();
