@@ -8,12 +8,10 @@
   const config = window.DFWS_SUPABASE;
   // 邮件通常会在默认浏览器打开；implicit 让回跳浏览器可直接建立会话，避免 PKCE 跨浏览器丢失 verifier。
   const client = supabase.createClient(config.url, config.publishableKey, { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true } });
-  // 临时公开看板模式：云端数据可匿名读取，所有写入必须保持关闭。
-  const readOnly = true;
+  const readOnly = false;
   let profile = null;
   let remoteHasData = false;
   let syncTimer = null;
-  const appOrigin = window.location.origin;
   const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id || '');
   const byPartner = (rows) => new Map(rows.map((row) => [`${row.owner_name}|${row.brand}`, row]));
   const staff = () => !readOnly && ['manager', 'brand_admin', 'ai_officer'].includes(profile?.role);
@@ -32,7 +30,7 @@
   async function loadState() {
     const [partnersRes, assetsRes, risksRes, reviewsRes] = await Promise.all([
       client.from('partners').select('*').order('brand').order('owner_name'), client.from('assets').select('*').order('created_at'),
-      client.from('risks').select('*').order('due_date'), readOnly ? Promise.resolve({ data: [], error: null }) : client.from('reviews').select('*')
+      client.from('risks').select('*').order('due_date'), client.from('reviews').select('*')
     ]);
     for (const result of [partnersRes, assetsRes, risksRes, reviewsRes]) if (result.error) throw result.error;
     remoteHasData = partnersRes.data.length > 0;
@@ -65,16 +63,7 @@
   }
 
   async function init() {
-    if (readOnly) {
-      showLogin(false);
-      document.querySelector('#sign-out').hidden = true;
-      document.querySelector('#account-state').hidden = true;
-      status('云端只读');
-      return loadState();
-    }
-    // 邮件链接回到页面时，SDK 写入 session 后刷新为无 token 的地址，再由下方 getSession 完成加载。
-    client.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_IN' && session && !profile) window.setTimeout(() => window.location.replace(window.location.pathname), 0); });
-    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const email = document.querySelector('#auth-email').value.trim(); const submit = document.querySelector('#auth-submit'); submit.disabled = true; const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: appOrigin } }); submit.disabled = false; document.querySelector('#auth-message').textContent = error ? error.message : '登录链接已发送，请在邮箱中打开。'; });
+    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const username = document.querySelector('#auth-username').value.trim().toLowerCase(); const password = document.querySelector('#auth-password').value; const submit = document.querySelector('#auth-submit'); if (username !== 'wanghui') { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } submit.disabled = true; const { data, error } = await client.auth.signInWithPassword({ email: 'wanghui@dfws.internal', password }); submit.disabled = false; if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } window.location.reload(); });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }

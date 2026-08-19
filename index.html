@@ -13,9 +13,10 @@
       <form id="auth-form" class="auth-panel">
         <p class="eyebrow">AI 伙伴核实</p>
         <h1>登录管理系统</h1>
-        <p>使用工作邮箱接收一次性登录链接。共享盘中的证据文件不会上传。</p>
-        <label>工作邮箱<input id="auth-email" type="email" autocomplete="email" required placeholder="name@company.com" /></label>
-        <button class="button primary" id="auth-submit" type="submit">发送登录链接</button>
+        <p>请输入管理员账号后查看云端数据。共享盘中的证据文件不会上传。</p>
+        <label>登录名<input id="auth-username" autocomplete="username" required placeholder="登录名" /></label>
+        <label>密码<input id="auth-password" type="password" autocomplete="current-password" required placeholder="密码" /></label>
+        <button class="button primary" id="auth-submit" type="submit">登录</button>
         <p id="auth-message" class="sub"></p>
       </form>
     </section>
