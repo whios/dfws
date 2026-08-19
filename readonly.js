@@ -1,6 +1,6 @@
 // 无登录公开模式下阻止旧页面控件修改浏览器状态，避免误以为已保存到云端。
 (function () {
-  const locked = '[data-edit],#add-asset,#save-verify,#save-review,#add-risk,[data-close],#reset-demo,#asset-submit';
+  const locked = '[data-edit],#add-asset,#save-verify,#save-review,#add-risk,[data-close],#reset-demo,#asset-submit,[data-drill],[data-go]';
   // 公开阶段只保留领导查看所需的总览与汇报入口。
   document.querySelectorAll('.nav-item').forEach((item) => { if (!['dashboard', 'report'].includes(item.dataset.view)) item.hidden = true; });
   document.querySelector('#reset-demo').hidden = true;
