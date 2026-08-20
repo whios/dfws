@@ -21,6 +21,17 @@
         <p id="auth-message" class="sub"></p>
       </form>
     </section>
+    <section id="reset-gate" class="auth-gate is-hidden" aria-label="重设密码">
+      <form id="reset-form" class="auth-panel">
+        <p class="eyebrow">AI 伙伴核实</p>
+        <h1>设置新密码</h1>
+        <p>请为当前账号设置新的登录密码。</p>
+        <label>新密码<input id="reset-password" type="password" autocomplete="new-password" minlength="6" required placeholder="至少 6 位" /></label>
+        <label>确认新密码<input id="reset-password-confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="再次输入新密码" /></label>
+        <button class="button primary" id="reset-submit" type="submit">保存新密码</button>
+        <p id="reset-message" class="sub"></p>
+      </form>
+    </section>
     <main class="self-review-shell">
       <header class="self-review-header">
         <a class="back-link" href="index.html">返回管理端</a>

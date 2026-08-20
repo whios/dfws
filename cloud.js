@@ -6,6 +6,7 @@
     return;
   }
   const config = window.DFWS_SUPABASE;
+  const isRecoveryRedirect = /(?:[?#&])type=recovery(?:[&#]|$)/.test(`${window.location.search}${window.location.hash}`);
   // 邮件通常会在默认浏览器打开；implicit 让回跳浏览器可直接建立会话，避免 PKCE 跨浏览器丢失 verifier。
   const client = supabase.createClient(config.url, config.publishableKey, { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true } });
   const readOnly = false;
@@ -17,6 +18,7 @@
   const staff = () => !readOnly && ['manager', 'brand_admin', 'ai_officer'].includes(profile?.role);
   const status = (text) => { const el = document.querySelector('#cloud-state'); if (el) el.textContent = text; };
   const showLogin = (show) => document.querySelector('#auth-gate')?.classList.toggle('is-hidden', !show);
+  const showPasswordReset = (show) => document.querySelector('#reset-gate')?.classList.toggle('is-hidden', !show);
   const roleLabel = (role) => ({ partner: '伙伴', manager: '负责人', brand_admin: '品牌管理员', ai_officer: 'AI 应用官', leader: '领导只读' })[role] || '待分配';
 
   async function getProfile(user) {
@@ -76,10 +78,28 @@
     };
     passwordToggle?.addEventListener('click', () => { passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password'; renderPasswordToggle(); passwordInput.focus(); });
     renderPasswordToggle();
+    document.querySelector('#reset-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const password = document.querySelector('#reset-password').value;
+      const confirmation = document.querySelector('#reset-password-confirm').value;
+      const message = document.querySelector('#reset-message');
+      const submit = document.querySelector('#reset-submit');
+      if (password !== confirmation) { message.textContent = '两次输入的密码不一致'; return; }
+      submit.disabled = true;
+      const { error } = await client.auth.updateUser({ password });
+      submit.disabled = false;
+      if (error) { message.textContent = error.message || '密码设置失败，请重新打开邮件链接。'; return; }
+      await client.auth.signOut();
+      window.history.replaceState({}, document.title, window.location.pathname);
+      showPasswordReset(false); showLogin(true);
+      document.querySelector('#auth-message').textContent = '密码已设置，请使用新密码登录。';
+      status('请使用新密码登录');
+    });
     document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const username = document.querySelector('#auth-username').value.trim().toLowerCase(); const password = document.querySelector('#auth-password').value; const email = { wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', wanghui01: 'wanghui01@dfwsgroup.com', user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal' }[username]; const submit = document.querySelector('#auth-submit'); if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } submit.disabled = true; const { data, error } = await client.auth.signInWithPassword({ email, password }); submit.disabled = false; if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } window.location.reload(); });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
+    if (isRecoveryRedirect) { showLogin(false); showPasswordReset(true); status('请设置新密码'); return null; }
     await getProfile(session.user);
     // 伙伴端不能复用管理端会话，避免管理账号绕过伙伴登录入口浏览或编辑自评。
     if (document.body.classList.contains('self-review-page') && profile?.role !== 'partner') {
