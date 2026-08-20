@@ -30,6 +30,12 @@
   function currentPartner() { return partners[Number(select.value)]; }
   function partnerKey(partner) { return `${partner.owner}|${partner.brand}|${partner.department}`; }
   function setStatus(text) { $('#save-status').textContent = text; }
+  function normalizeEvidence(value) {
+    const raw = String(value || '').trim();
+    // 从聊天分享文案中只保留第一个 http(s) 链接，避免“【WorkBuddy】hi”等前缀进入核验台账。
+    const matched = raw.match(/https?:\/\/[^\s<>"'）】]+/i);
+    return matched ? matched[0].replace(/[，。；、]+$/u, '') : raw;
+  }
   function renderPartnerOptions() {
     const brand = brandFilter.value;
     const query = partnerSearch.value;
@@ -105,6 +111,7 @@
   select.addEventListener('change', renderPartner);
   brandFilter.addEventListener('change', renderPartnerOptions);
   partnerSearch.addEventListener('input', renderPartnerOptions);
+  $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); });
   $('#skill-file').addEventListener('change', (event) => {
     const file = event.target.files[0];
     $('#skill-file-status').textContent = file ? `${file.name} · ${formatSize(file.size)}` : '尚未选择文件';
@@ -114,7 +121,8 @@
     if (selfSubmitInFlight) return;
     const partner = currentPartner();
     if (!partner) return;
-    const evidence = $('#evidence-url').value.trim();
+    const evidence = normalizeEvidence($('#evidence-url').value);
+    $('#evidence-url').value = evidence;
     const level = $('#self-level').value;
     const summaryText = $('#self-summary').value.trim();
     const outcome = $('#self-outcome').value.trim();
