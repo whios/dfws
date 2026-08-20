@@ -1,20 +1,6 @@
-// 首版用于本地演示的资产与风险数据；真实使用时由台账录入替换。
-const seedAssets=[
- {id:'a1',name:'公众号推文智能体',type:'智能体',brand:'先之',department:'产品部',owner:'黎强',platform:'WorkBuddy',task:'按品牌语言风格完成公众号推文初稿与优化',calls:14,level:'V3',status:'通过',evidence:'\\\\fileserver\\AI验收\\先之\\公众号推文智能体.png',review:'审核事实、语言风格与品牌表述',checks:[1,1,1,1,1,1,0,1]},
- {id:'a2',name:'客户方案生成 Skill',type:'Skill',brand:'先之',department:'销售部',owner:'章立合',platform:'WorkBuddy',task:'基于客户需求生成可编辑的培训方案框架',calls:8,level:'V2',status:'需优化',evidence:'https://drive.company.example/xianzhi/sales-skill',review:'审核客户信息、方案逻辑和报价边界',checks:[1,1,1,1,1,1,0,1]},
- {id:'a3',name:'招聘线索采集工作流',type:'工作流',brand:'乔邦',department:'二中心',owner:'朱汉莹',platform:'WorkBuddy',task:'每日采集行业招聘线索并生成BD跟进清单',calls:26,level:'V3',status:'通过',evidence:'\\\\fileserver\\AI验收\\乔邦\\招聘线索流程.png',review:'人工抽检线索真实度及重复率',checks:[1,1,1,1,1,1,1,1]},
- {id:'a4',name:'每日咨询推送',type:'智能体',brand:'最佳东方',department:'服务部',owner:'叶晓霞',platform:'WorkBuddy',task:'每日整理咨询问题并推送服务团队',calls:29,level:'V3',status:'通过',evidence:'https://drive.company.example/bestjob/daily-push',review:'检查客户隐私和信息完整性',checks:[1,1,1,1,1,1,0,1]},
- {id:'a5',name:'客户健康度报告 Skill',type:'Skill',brand:'最佳东方',department:'续签部',owner:'程亚蕊',platform:'WorkBuddy',task:'汇总客户招聘动态及竞品数据，生成客户健康度报告',calls:5,level:'V1',status:'补充证据',evidence:'',review:'核对来源和结论可追溯性',checks:[0,1,0,0,1,1,0,0]},
- {id:'a6',name:'报告撰写工作流',type:'工作流',brand:'迈点',department:'研究院',owner:'熊思敏',platform:'WorkBuddy',task:'资料搜集、报告撰写与PPT大纲生成',calls:11,level:'V2',status:'需优化',evidence:'\\\\fileserver\\AI验收\\迈点\\报告工作流.docx',review:'核验数据真实性、引用来源与报告深度',checks:[1,1,1,1,1,1,0,1]},
- {id:'a7',name:'媒体邮箱采集 Skill',type:'Skill',brand:'迈点',department:'市场运营部',owner:'王飞',platform:'WorkBuddy',task:'收集市级媒体投稿邮箱，沉淀可筛选名单',calls:17,level:'V4',status:'通过',evidence:'https://drive.company.example/maidian/media-email',review:'去重、邮箱有效性与对外使用合规',checks:[1,1,1,1,1,1,1,1]},
- {id:'a8',name:'岗位画像匹配助手',type:'智能体',brand:'乔邦',department:'猎头顾问',owner:'李奕虎',platform:'WorkBuddy',task:'根据职位与候选人信息生成匹配分数和推荐报告',calls:19,level:'V3',status:'通过',evidence:'https://drive.company.example/qiaobang/match-agent',review:'不得作为自动录用依据，须人工审核评分',checks:[1,1,1,1,1,1,1,1]}
-];
-const seedRisks=[
- {id:'r1',kind:'无链接/路径',priority:'高',brand:'最佳东方',owner:'程亚蕊',due:'2026-08-25',status:'待整改',note:'客户健康度报告 Skill 尚未提供可访问证据。'},
- {id:'r2',kind:'输出准确性',priority:'高',brand:'迈点',owner:'熊思敏',due:'2026-08-28',status:'整改中',note:'报告工作流需补充数据来源与人工复核记录。'},
- {id:'r3',kind:'数据权限不清',priority:'中',brand:'乔邦',owner:'李奕虎',due:'2026-09-02',status:'待整改',note:'候选人匹配数据的访问范围和保存周期待确认。'},
- {id:'r4',kind:'重复资产',priority:'中',brand:'先之',owner:'章立合',due:'2026-09-05',status:'待整改',note:'客户方案类 Skill 需与销售团队既有模板去重。'}
-];
+// 线上台账从云端读取；离线时不再回填任何示例资产或示例风险。
+const seedAssets=[];
+const seedRisks=[];
 // 由四份伙伴摸底表提取：131 条任务记录，合并同一伙伴的重复任务后为 123 位伙伴。
 const seedPartners=[["黎强","先之","产品部"],["章立合","先之","销售部"],["朱益楠","先之","产品部"],["李熙熙","先之","销售部"],["贾宇微","先之","销售部"],["苏丹丹","先之","销售部"],["吴健","先之","服务部"],["蔡增香","先之","销售部"],["徐依伦","先之","产品部"],["陈林静","先之","产品部"],["史继东","先之","产品部"],["杨霄何","先之","服务部"],["刘娅峰","先之","产品部"],["王丽","先之","先之"],["张哲","乔邦","二中心/BD"],["朱汉莹","乔邦","二中心/BD"],["张旭","乔邦","总裁助理"],["李奕虎","乔邦","二中心/猎头顾问"],["王丽丽","乔邦","二中心/猎头顾问"],["韦栋腾","乔邦","一中心/猎头顾问"],["张璐","乔邦","一中心/猎头顾问"],["王金茹","乔邦","一中心/猎头顾问"],["刘晓旭","乔邦","二中心/猎头顾问"],["朱玉斯","乔邦","二中心/猎头顾问"],["杨慧凯","乔邦","二中心/BD"],["金晓东","乔邦","二中心/BD"],["韩蒙","最佳东方","服务部/经理"],["叶晓霞","最佳东方","服务部/客服专员"],["曾利平","最佳东方","服务部/客服专员"],["肖雨","最佳东方","服务部/客服专员"],["黄磊","最佳东方","服务部/客服专员"],["苏丽英","最佳东方","服务部/客服专员"],["徐炜鸿","最佳东方","服务部/客服专员"],["黄川美","最佳东方","服务部/客服专员"],["晏慧珍","最佳东方","续签部/续签专员"],["程亚蕊","最佳东方","续签部/续签专员"],["王旭文","最佳东方","续签部/续签专员"],["陈佩珊","最佳东方","续签部/续签专员"],["阳莹","最佳东方","续签部/续签专员"],["吴慧","最佳东方","续签部/续签专员"],["苏邱","最佳东方","续签部/续签专员"],["陈亚运","最佳东方","续签部/续签专员"],["张凤玲","最佳东方","商务部/商务经理"],["毛小翠","最佳东方","院校部/院校专员"],["高满霞","最佳东方","研究院/研究员"],["肖三群","最佳东方","文旅中心/总经理"],["张慧丽","最佳东方","文旅中心/培训助理"],["宋思思","最佳东方","HR1/销售"],["胡海青","最佳东方","HR1/销售"],["胡敏慧","最佳东方","HR1/销售"],["王建峰","最佳东方","HR1/销售"],["梁坤艳","最佳东方","HR1/销售"],["陈沛燕","最佳东方","HR1/销售"],["伍长春","最佳东方","HR2/经理"],["杨茂","最佳东方","HR2/销售"],["靳鸿鑫","最佳东方","HR2/销售"],["姚银丹","最佳东方","HR2/销售"],["张林","最佳东方","HR2/销售"],["李成鹏","最佳东方","HR2/销售"],["鲍燕锋","最佳东方","HR3/副经理"],["杨海菲","最佳东方","HR3/销售"],["潘玉","最佳东方","HR3/销售"],["周隆鑫","最佳东方","HR3/销售"],["潘慧菁","最佳东方","HR3/销售"],["王前进","最佳东方","HR3/销售"],["朱佳杰","最佳东方","HR4/经理"],["陈亚玲","最佳东方","HR4/销售"],["张程玲","最佳东方","HR4/销售"],["杨秀文","最佳东方","HR4/销售"],["程鹏","最佳东方","HR4/销售"],["赖凌云","最佳东方","HR4/销售"],["陈斌","最佳东方","HR4/销售"],["谢洪飞","最佳东方","HR4/销售"],["孙虹玲","最佳东方","大美业/经理"],["王春蕾","最佳东方","大美业/销售"],["吴菲","最佳东方","大美业/客服"],["沈青松","最佳东方","运营部/用户运营"],["赖素素","最佳东方","运营部/社群运营"],["姜灵","最佳东方","运营部/社群运营"],["韩茹弘","最佳东方","运营部/社群运营"],["雷颜宁","最佳东方","运营部/实习生"],["甘子恒","最佳东方","运营部/实习生"],["胡可","最佳东方","运营部/实习生"],["靳琼","最佳东方","运营部/实习生"],["邓嘉琴","最佳东方","运营部/实习生"],["邱慧喜","最佳东方","运营部/实习生"],["刘淑亚","最佳东方","品牌部/运营专员"],["李梦聪","最佳东方","品牌部/活动运营"],["苗烨帅","最佳东方","品牌部/新媒体运营"],["陈帅男","最佳东方","品牌部/平面设计"],["包婷","最佳东方","品牌部/平面设计"],["韩冰","最佳东方","品牌部/主播"],["郭德荣","迈点","办公室"],["王丹丹","迈点","办公室"],["曹沁","迈点","新闻部"],["邱娟","迈点","新闻部"],["郑雪","迈点","新闻部"],["李沁屿","迈点","新闻部"],["陈健","迈点","新闻部"],["葛俊豪","迈点","新闻部"],["史维鹏","迈点","新闻部"],["邢晶晶","迈点","研究院"],["高园园","迈点","研究院"],["熊思敏","迈点","研究院"],["王芃兮","迈点","市场运营部"],["刘庆玲","迈点","市场运营部"],["吕莉","迈点","市场运营部"],["阮戟","迈点","市场运营部"],["冯长河","迈点","市场运营部"],["王飞","迈点","市场运营部"],["虞舒芳","迈点","市场运营部"],["黄纵武","迈点","供应链事业部"],["张衍","迈点","供应链事业部"],["王文燕","迈点","供应链事业部"],["徐金鑫","迈点","供应链事业部"],["顾晨林","迈点","酒店事业部"],["张明月","迈点","酒店事业部"],["刘璇","迈点","酒店事业部"],["周江荣","迈点","文旅事业部"],["涂铁虎","迈点","文旅事业部"],["张闻天","迈点","文旅事业部"],["鲁雅怡","迈点","政府服务部"],["李璀璀","迈点","政府服务部"]].map(([owner,brand,department])=>({owner,brand,department}));
 // 原始摸底中标记为 L3 的 61 条记录；同一伙伴多场景保留多条，确保与总览口径一致。
@@ -25,7 +11,15 @@ const seedReviews={
  '章立合':{self:'已将客户信息搜集和方案框架沉淀为可复用步骤，准确性仍需人工核验。',manager:'应优先验证销售同伴是否能独立使用该 Skill。',officer:'补齐知识库来源和共享路径后可按 V2 验收。',selfLevel:'基本达标',managerLevel:'需优化',officerLevel:'V2 可复用'}
 };
 // 数据只保存在当前浏览器。共享盘证据仅保存链接或 SMB 路径，不上传任何文件。
-const key='dfws-v1';let state=JSON.parse(localStorage.getItem(key)||'null')||{assets:seedAssets,risks:seedRisks,partners:seedPartners};let editing=null,selectedId=state.assets[0].id, dashboardBrand='全部品牌',assetScope='all',riskScope='all',reviewSearch='',partnerPage=1,partnerMode='all';
+const key='dfws-v1';let state=JSON.parse(localStorage.getItem(key)||'null')||{assets:seedAssets,risks:seedRisks,partners:seedPartners};
+// 旧版本把 a1-a8、r1-r4 写入浏览器缓存。只清除这些已废弃的演示 ID，保留以后录入的真实数据。
+const retiredDemoAssetIds=new Set(['a1','a2','a3','a4','a5','a6','a7','a8']);
+const retiredDemoRiskIds=new Set(['r1','r2','r3','r4']);
+let removedDemoData=false;
+if(Array.isArray(state.assets)){const next=state.assets.filter(a=>!retiredDemoAssetIds.has(a.id));removedDemoData||=next.length!==state.assets.length;state.assets=next}else state.assets=[];
+if(Array.isArray(state.risks)){const next=state.risks.filter(r=>!retiredDemoRiskIds.has(r.id));removedDemoData||=next.length!==state.risks.length;state.risks=next}else state.risks=[];
+if(removedDemoData)localStorage.setItem(key,JSON.stringify(state));
+let editing=null,selectedId=state.assets[0]?.id, dashboardBrand='全部品牌',assetScope='all',riskScope='all',reviewSearch='',partnerPage=1,partnerMode='all';
 if(!state.reviews)state.reviews=structuredClone(seedReviews);if(!state.partners)state.partners=structuredClone(seedPartners);let selectedReviewOwner=Object.keys(seedReviews)[0];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];const brandBase={先之:{records:22,l3:7,declared:9},乔邦:{records:12,l3:7,declared:12},最佳东方:{records:66,l3:39,declared:63},迈点:{records:31,l3:8,declared:25}};
 // 支持完整包含、空格分词和按字符顺序匹配，例如“最东”可匹配“最佳东方”。
