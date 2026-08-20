@@ -17,6 +17,8 @@
   const link = $('#evidence-link');
   const historySelect = $('#submission-history-select');
   const historyContent = $('#submission-history-content');
+  let selfSubmitInFlight = false;
+  let skillUploadInFlight = false;
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
@@ -109,6 +111,7 @@
   });
   $('#self-review-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (selfSubmitInFlight) return;
     const partner = currentPartner();
     if (!partner) return;
     const evidence = $('#evidence-url').value.trim();
@@ -122,7 +125,9 @@
     ].filter(Boolean).join('\n');
     const submit = event.currentTarget.querySelector('[type="submit"]');
     try {
+      selfSubmitInFlight = true;
       submit.disabled = true;
+      submit.setAttribute('aria-busy', 'true');
       setStatus('正在提交云端自评');
       await window.DfwsCloud.submitSelfReview(partner, { self: selfReview, selfLevel: level, evidence });
       // 保留浏览器草稿，仅用于断网后再次编辑；云端记录才是管理端的正式数据源。
@@ -137,10 +142,13 @@
       $('#form-message').textContent = error.message || '自评提交失败，请稍后重试。';
       setStatus('提交失败');
     } finally {
+      selfSubmitInFlight = false;
       submit.disabled = false;
+      submit.removeAttribute('aria-busy');
     }
   });
   $('#upload-skill').addEventListener('click', async () => {
+    if (skillUploadInFlight) return;
     const partner = currentPartner();
     const file = $('#skill-file').files[0];
     const title = $('#skill-title').value.trim();
@@ -148,7 +156,9 @@
     if (!file) { $('#form-message').textContent = '请选择要提交的 Skill 文件。'; return; }
     const button = $('#upload-skill');
     try {
+      skillUploadInFlight = true;
       button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
       button.textContent = '正在上传...';
       setStatus('成果上传中');
       await window.DfwsCloud.uploadSkill(partner, { title, description: $('#skill-description').value.trim() }, file);
@@ -163,7 +173,9 @@
       $('#form-message').textContent = error.message || '成果上传失败，请稍后重试。';
       setStatus('上传失败');
     } finally {
+      skillUploadInFlight = false;
       button.disabled = false;
+      button.removeAttribute('aria-busy');
       button.textContent = '提交成果审核';
     }
   });
