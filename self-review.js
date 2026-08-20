@@ -15,6 +15,8 @@
   const summary = $('#partner-summary');
   const preview = $('#evidence-preview');
   const link = $('#evidence-link');
+  const historySelect = $('#submission-history-select');
+  const historyContent = $('#submission-history-content');
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
@@ -76,6 +78,24 @@
   async function loadResources() {
     try { renderResources(await window.DfwsCloud.listSkillResources()); } catch (error) { $('#resource-list').innerHTML = `<p class="empty">${esc(error.message || '成果库加载失败')}</p>`; }
   }
+  function formatSubmittedAt(value) { return new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)); }
+  function renderSubmissionHistory(records) {
+    $('#submission-history-count').textContent = `${records.length} 次提交`;
+    historySelect.disabled = records.length === 0;
+    historySelect.innerHTML = records.length ? records.map((record, index) => `<option value="${index}">${formatSubmittedAt(record.submittedAt)} · ${esc(record.selfLevel)}</option>`).join('') : '<option>暂无提交记录</option>';
+    const renderSelected = () => {
+      const record = records[Number(historySelect.value)];
+      if (!record) { historyContent.innerHTML = '<p class="empty">暂未提交个人自评。</p>'; return; }
+      const evidence = record.evidence ? `<p><strong>证据：</strong><a href="${esc(record.evidence)}" target="_blank" rel="noreferrer">打开证据</a></p>` : '';
+      historyContent.innerHTML = `<p><strong>${esc(record.selfLevel)} · ${formatSubmittedAt(record.submittedAt)}</strong></p><p>${esc(record.selfReview)}</p>${evidence}`;
+    };
+    historySelect.onchange = renderSelected;
+    renderSelected();
+  }
+  async function loadSubmissionHistory() {
+    try { renderSubmissionHistory(await window.DfwsCloud.listReviewSubmissions()); }
+    catch (error) { $('#submission-history-count').textContent = '加载失败'; historyContent.innerHTML = `<p class="empty">${esc(error.message || '提交记录加载失败')}</p>`; }
+  }
   function refreshBrands() {
     brandFilter.innerHTML = '<option value="全部品牌">全部品牌</option>' + [...new Set(partners.map((partner) => partner.brand))].map((brand) => `<option value="${esc(brand)}">${esc(brand)}</option>`).join('');
   }
@@ -104,7 +124,7 @@
     try {
       submit.disabled = true;
       setStatus('正在提交云端自评');
-      await window.DfwsCloud.saveReview(partner.owner, { self: selfReview, selfLevel: level });
+      await window.DfwsCloud.submitSelfReview(partner, { self: selfReview, selfLevel: level, evidence });
       // 保留浏览器草稿，仅用于断网后再次编辑；云端记录才是管理端的正式数据源。
       saved[partnerKey(partner)] = { level, summary: summaryText, outcome, evidence, submittedAt: new Date().toISOString() };
       localStorage.setItem(localKey, JSON.stringify(saved));
@@ -112,6 +132,7 @@
       link.href = evidence;
       $('#form-message').textContent = '个人自评已提交云端，管理端可立即查看。';
       setStatus('云端自评已提交');
+      await loadSubmissionHistory();
     } catch (error) {
       $('#form-message').textContent = error.message || '自评提交失败，请稍后重试。';
       setStatus('提交失败');
@@ -166,7 +187,7 @@
         refreshBrands();
         renderPartnerOptions();
       }
-      if (window.DfwsCloud.profile) { setStatus('云端已连接'); await loadResources(); }
+      if (window.DfwsCloud.profile) { setStatus('云端已连接'); await Promise.all([loadResources(), loadSubmissionHistory()]); }
     } catch (error) { setStatus('云端连接失败'); $('#form-message').textContent = error.message || '云端连接失败，请稍后重试。'; }
   }
   init();

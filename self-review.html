@@ -94,6 +94,11 @@
           <button class="button primary" type="submit">提交个人自评</button>
         </footer>
       </form>
+      <section class="submission-history" aria-labelledby="submission-history-title">
+        <div class="section-title"><div><p class="eyebrow">提交记录</p><h2 id="submission-history-title">历次个人自评</h2></div><span id="submission-history-count" class="sub">加载中</span></div>
+        <label>选择提交版本<select id="submission-history-select" disabled><option>暂无提交记录</option></select></label>
+        <div id="submission-history-content" class="submission-history-content"><p class="empty">正在加载提交记录。</p></div>
+      </section>
       <section class="resource-library" aria-labelledby="resource-library-title">
         <div class="section-title"><div><p class="eyebrow">成果库</p><h2 id="resource-library-title">已发布成果</h2></div><span id="resource-count" class="sub">加载中</span></div>
         <div id="resource-list" class="resource-list"><p class="empty">正在加载成果库。</p></div>

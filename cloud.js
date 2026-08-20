@@ -116,6 +116,17 @@
     const { error } = await client.from('reviews').upsert(payload, { onConflict: 'partner_id' });
     if (error) throw error;
   }
+  async function submitSelfReview(partner, values) {
+    if (profile?.role !== 'partner' || profile.partner_id !== partner?.id) throw new Error('伙伴账号只能提交本人自评。');
+    const { error: historyError } = await client.from('review_submissions').insert({ partner_id: partner.id, submitted_by: profile.id, self_level: values.selfLevel, self_review: values.self, evidence_path: values.evidence || null });
+    if (historyError) throw historyError;
+    await saveReview(partner.owner, values);
+  }
+  async function listReviewSubmissions() {
+    const { data, error } = await client.from('review_submissions').select('id, partner_id, self_level, self_review, evidence_path, submitted_at, partners(owner_name, brand, department)').order('submitted_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((item) => ({ id: item.id, partnerId: item.partner_id, selfLevel: item.self_level, selfReview: item.self_review, evidence: item.evidence_path, submittedAt: item.submitted_at, owner: item.partners?.owner_name, brand: item.partners?.brand, department: item.partners?.department }));
+  }
   async function listSkillResources(includeDownloads = false) {
     const { data: resources, error } = await client.from('skill_resources').select('*, partners(owner_name, brand, department)').order('created_at', { ascending: false });
     if (error) throw error;
@@ -172,5 +183,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, listSkillResources, uploadSkill, downloadSkill, reviewSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();

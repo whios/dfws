@@ -25,6 +25,12 @@
 .evidence-preview span { color: var(--green); font-size: 12px; font-weight: 700; }
 .evidence-preview a { color: var(--teal); font-size: 13px; font-weight: 700; }
 .resource-action { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+.submission-history { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
+.submission-history > label { display: grid; font-size: 12px; font-weight: 700; gap: 6px; margin-top: 14px; }
+.submission-history select { background: #fff; border: 1px solid var(--line); border-radius: 5px; font: inherit; padding: 9px; width: 100%; }
+.submission-history-content { background: #f4faf9; border-left: 3px solid var(--teal); margin-top: 12px; padding: 12px 14px; }
+.submission-history-content p { margin: 0 0 8px; white-space: pre-wrap; }
+.submission-history-content p:last-child { margin-bottom: 0; }
 .resource-library { background: #fff; border-top: 2px solid var(--teal); margin-top: 28px; padding: 22px 0 0; }
 .resource-library .section-title { padding: 0 20px; }
 .resource-library .section-title > div { display: grid; gap: 1px; }
