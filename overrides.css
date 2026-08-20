@@ -106,3 +106,9 @@ a.nav-item { text-decoration: none; }
 .auth-panel label { display: grid; font-size: 12px; font-weight: 650; gap: 6px; margin-bottom: 14px; }
 .auth-panel input { border: 1px solid var(--line); border-radius: 5px; font: inherit; padding: 10px; }
 .auth-panel .button { width: 100%; }
+.password-field { display: block; position: relative; }
+.auth-panel .password-field input { box-sizing: border-box; padding-right: 42px; width: 100%; }
+.password-toggle { align-items: center; background: transparent; border: 0; color: var(--muted); cursor: pointer; display: inline-flex; height: 34px; justify-content: center; padding: 0; position: absolute; right: 4px; top: 3px; width: 34px; }
+.password-toggle:hover, .password-toggle:focus-visible { color: var(--teal); outline: none; }
+.password-toggle:focus-visible { box-shadow: 0 0 0 2px #8fc8c1; border-radius: 4px; }
+.password-toggle svg { height: 18px; width: 18px; }

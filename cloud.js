@@ -64,6 +64,18 @@
   }
 
   async function init() {
+    const passwordInput = document.querySelector('#auth-password');
+    const passwordToggle = document.querySelector('[data-password-toggle]');
+    const renderPasswordToggle = () => {
+      if (!passwordInput || !passwordToggle) return;
+      const visible = passwordInput.type === 'text';
+      passwordToggle.setAttribute('aria-label', visible ? '隐藏密码' : '显示密码');
+      passwordToggle.title = visible ? '隐藏密码' : '显示密码';
+      passwordToggle.innerHTML = `<i data-lucide="${visible ? 'eye-off' : 'eye'}" aria-hidden="true"></i>`;
+      window.lucide?.createIcons({ attrs: { 'aria-hidden': 'true' } });
+    };
+    passwordToggle?.addEventListener('click', () => { passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password'; renderPasswordToggle(); passwordInput.focus(); });
+    renderPasswordToggle();
     document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const username = document.querySelector('#auth-username').value.trim().toLowerCase(); const password = document.querySelector('#auth-password').value; const email = { wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal' }[username]; const submit = document.querySelector('#auth-submit'); if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } submit.disabled = true; const { data, error } = await client.auth.signInWithPassword({ email, password }); submit.disabled = false; if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } window.location.reload(); });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
