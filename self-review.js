@@ -30,7 +30,7 @@
     const brand = brandFilter.value;
     const query = partnerSearch.value;
     const list = partners.map((partner, index) => ({ ...partner, index })).filter((partner) => (brand === '全部品牌' || partner.brand === brand) && fuzzyMatch(`${partner.owner}${partner.brand}${partner.department}`, query));
-    select.disabled = list.length === 0;
+    select.disabled = list.length === 0 || window.DfwsCloud?.profile?.role === 'partner';
     select.innerHTML = list.length ? list.map((partner) => `<option value="${partner.index}">${esc(partner.owner)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`).join('') : '<option value="">未找到匹配伙伴</option>';
     if (!list.length) { summary.innerHTML = '<div><dt>伙伴信息</dt><dd>请调整品牌或搜索条件</dd></div>'; return; }
     renderPartner();
@@ -87,17 +87,37 @@
     const file = event.target.files[0];
     $('#skill-file-status').textContent = file ? `${file.name} · ${formatSize(file.size)}` : '尚未选择文件';
   });
-  $('#self-review-form').addEventListener('submit', (event) => {
+  $('#self-review-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const partner = currentPartner();
     if (!partner) return;
     const evidence = $('#evidence-url').value.trim();
-    saved[partnerKey(partner)] = { level: $('#self-level').value, summary: $('#self-summary').value.trim(), outcome: $('#self-outcome').value.trim(), evidence, submittedAt: new Date().toISOString() };
-    localStorage.setItem(localKey, JSON.stringify(saved));
-    preview.hidden = false;
-    link.href = evidence;
-    $('#form-message').textContent = '自评草稿已保存。伙伴账号开放后会同步为本人云端自评。';
-    setStatus('自评草稿已保存');
+    const level = $('#self-level').value;
+    const summaryText = $('#self-summary').value.trim();
+    const outcome = $('#self-outcome').value.trim();
+    const selfReview = [
+      `真实任务：${summaryText}`,
+      outcome ? `效果或复用：${outcome}` : '',
+      `核验证据：${evidence}`
+    ].filter(Boolean).join('\n');
+    const submit = event.currentTarget.querySelector('[type="submit"]');
+    try {
+      submit.disabled = true;
+      setStatus('正在提交云端自评');
+      await window.DfwsCloud.saveReview(partner.owner, { self: selfReview, selfLevel: level });
+      // 保留浏览器草稿，仅用于断网后再次编辑；云端记录才是管理端的正式数据源。
+      saved[partnerKey(partner)] = { level, summary: summaryText, outcome, evidence, submittedAt: new Date().toISOString() };
+      localStorage.setItem(localKey, JSON.stringify(saved));
+      preview.hidden = false;
+      link.href = evidence;
+      $('#form-message').textContent = '个人自评已提交云端，管理端可立即查看。';
+      setStatus('云端自评已提交');
+    } catch (error) {
+      $('#form-message').textContent = error.message || '自评提交失败，请稍后重试。';
+      setStatus('提交失败');
+    } finally {
+      submit.disabled = false;
+    }
   });
   $('#upload-skill').addEventListener('click', async () => {
     const partner = currentPartner();
@@ -131,7 +151,21 @@
     renderPartnerOptions();
     try {
       const remote = await window.DfwsCloud.init();
-      if (remote?.partners?.length) { partners = remote.partners; refreshBrands(); renderPartnerOptions(); }
+      if (remote?.partners?.length) {
+        partners = remote.partners;
+        const profile = window.DfwsCloud.profile;
+        if (profile?.role === 'partner') {
+          // 伙伴账号只能浏览、上传和自评其 profile 绑定的唯一伙伴记录。
+          partners = partners.filter((partner) => partner.id === profile.partner_id);
+          brandFilter.value = '全部品牌';
+          brandFilter.disabled = true;
+          partnerSearch.value = '';
+          partnerSearch.disabled = true;
+          select.disabled = true;
+        }
+        refreshBrands();
+        renderPartnerOptions();
+      }
       if (window.DfwsCloud.profile) { setStatus('云端已连接'); await loadResources(); }
     } catch (error) { setStatus('云端连接失败'); $('#form-message').textContent = error.message || '云端连接失败，请稍后重试。'; }
   }
