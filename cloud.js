@@ -23,7 +23,8 @@
     const { data, error } = await client.from('profiles').select('id, email, display_name, role, partner_id').eq('id', user.id).single();
     if (error) throw error;
     profile = data;
-    document.querySelector('#account-state').textContent = `${data.display_name || data.email} · ${roleLabel(data.role)}`;
+    const accountState = document.querySelector('#account-state');
+    if (accountState) accountState.textContent = `${data.display_name || data.email} · ${roleLabel(data.role)}`;
     status('已连接云端');
   }
 
@@ -96,7 +97,61 @@
     const { error } = await client.from('reviews').upsert(payload, { onConflict: 'partner_id' });
     if (error) throw error;
   }
+  async function listSkillResources(includeDownloads = false) {
+    const { data: resources, error } = await client.from('skill_resources').select('*, partners(owner_name, brand, department)').order('created_at', { ascending: false });
+    if (error) throw error;
+    let downloads = [];
+    if (includeDownloads && staff()) {
+      const [downloadsRes, profilesRes] = await Promise.all([
+        client.from('skill_downloads').select('resource_id, downloaded_by, downloaded_at').order('downloaded_at', { ascending: false }),
+        client.from('profiles').select('id, email, display_name')
+      ]);
+      if (downloadsRes.error) throw downloadsRes.error;
+      if (profilesRes.error) throw profilesRes.error;
+      const names = new Map(profilesRes.data.map((item) => [item.id, item.display_name || item.email]));
+      downloads = downloadsRes.data.map((item) => ({ ...item, downloader: names.get(item.downloaded_by) || '未知账号' }));
+    }
+    return { resources: resources || [], downloads };
+  }
+  async function uploadSkill(partner, values, file) {
+    if (!profile) throw new Error('请先登录后提交成果。');
+    if (!file) throw new Error('请选择要提交的 Skill 文件。');
+    if (file.size > 200 * 1024 * 1024) throw new Error('单个文件最大支持 200MB。');
+    if (!partner?.id) throw new Error('请选择对应的伙伴记录。');
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'skill-file';
+    const path = `${profile.id}/${crypto.randomUUID()}-${safeName}`;
+    const bucket = client.storage.from('skill-files');
+    const { error: uploadError } = await bucket.upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream' });
+    if (uploadError) throw uploadError;
+    const { data, error } = await client.from('skill_resources').insert({
+      partner_id: partner.id,
+      uploaded_by: profile.id,
+      title: values.title,
+      description: values.description || '',
+      file_name: file.name,
+      file_path: path,
+      mime_type: file.type || null,
+      size_bytes: file.size
+    }).select().single();
+    if (error) {
+      await bucket.remove([path]);
+      throw error;
+    }
+    return data;
+  }
+  async function downloadSkill(resource) {
+    const { error: logError } = await client.rpc('record_skill_download', { resource_id: resource.id });
+    if (logError) throw logError;
+    const { data, error } = await client.storage.from('skill-files').createSignedUrl(resource.file_path, 60);
+    if (error) throw error;
+    return data.signedUrl;
+  }
+  async function reviewSkill(id, values) {
+    if (!staff()) throw new Error('当前账号没有审核成果的权限。');
+    const { error } = await client.from('skill_resources').update({ status: values.status, review_note: values.reviewNote || null, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, get role() { return profile?.role; }, readOnly };
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, listSkillResources, uploadSkill, downloadSkill, reviewSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();
