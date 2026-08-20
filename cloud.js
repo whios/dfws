@@ -68,7 +68,14 @@
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
-    await getProfile(session.user); showLogin(false); return loadState();
+    await getProfile(session.user);
+    // 伙伴端不能复用管理端会话，避免管理账号绕过伙伴登录入口浏览或编辑自评。
+    if (document.body.classList.contains('self-review-page') && profile?.role !== 'partner') {
+      showLogin(true);
+      status('请使用伙伴账号登录');
+      return null;
+    }
+    showLogin(false); return loadState();
   }
   function queueSync(state) { if (readOnly || !remoteHasData || !staff()) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => writeState(state).catch((error) => { status('云端同步失败'); console.error(error); }), 600); }
   async function listProfiles() {
