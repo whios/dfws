@@ -6,7 +6,18 @@
     return;
   }
   const config = window.DFWS_SUPABASE;
-  const isRecoveryRedirect = /(?:[?#&])type=recovery(?:[&#]|$)/.test(`${window.location.search}${window.location.hash}`);
+  const authRedirect = `${window.location.search}${window.location.hash}`;
+  const isRecoveryRedirect = /(?:[?#&])type=recovery(?:[&#]|$)/.test(authRedirect);
+  const isInviteRedirect = /(?:[?#&])type=invite(?:[&#]|$)/.test(authRedirect);
+  // Supabase invitations inherit the project Site URL, which is the admin home.
+  // Move partner invitations to the password setup form before the token is consumed.
+  if (isInviteRedirect && !document.body.classList.contains('self-review-page')) {
+    const partnerUrl = new URL('self-review.html', window.location.href);
+    partnerUrl.search = window.location.search;
+    partnerUrl.hash = window.location.hash;
+    window.location.replace(partnerUrl.href);
+    return;
+  }
   // 邮件通常会在默认浏览器打开；implicit 让回跳浏览器可直接建立会话，避免 PKCE 跨浏览器丢失 verifier。
   const client = supabase.createClient(config.url, config.publishableKey, { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true } });
   const readOnly = false;
@@ -95,11 +106,11 @@
       document.querySelector('#auth-message').textContent = '密码已设置，请使用新密码登录。';
       status('请使用新密码登录');
     });
-    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const username = document.querySelector('#auth-username').value.trim().toLowerCase(); const password = document.querySelector('#auth-password').value; const email = { wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', wanghui01: 'wanghui01@dfwsgroup.com', user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal' }[username]; const submit = document.querySelector('#auth-submit'); if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } submit.disabled = true; const { data, error } = await client.auth.signInWithPassword({ email, password }); submit.disabled = false; if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } window.location.reload(); });
+    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const username = document.querySelector('#auth-username').value.trim().toLowerCase(); const password = document.querySelector('#auth-password').value; const email = { wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', wanghui01: 'wanghui01@dfwsgroup.com', user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal' }[username] || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) ? username : null); const submit = document.querySelector('#auth-submit'); if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } submit.disabled = true; const { data, error } = await client.auth.signInWithPassword({ email, password }); submit.disabled = false; if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } window.location.reload(); });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
-    if (isRecoveryRedirect) { showLogin(false); showPasswordReset(true); status('请设置新密码'); return null; }
+    if (isRecoveryRedirect || isInviteRedirect) { showLogin(false); showPasswordReset(true); status('请设置新密码'); return null; }
     await getProfile(session.user);
     // 伙伴端不能复用管理端会话，避免管理账号绕过伙伴登录入口浏览或编辑自评。
     if (document.body.classList.contains('self-review-page') && profile?.role !== 'partner') {
