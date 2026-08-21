@@ -106,16 +106,41 @@
       document.querySelector('#auth-message').textContent = '密码已设置，请使用新密码登录。';
       status('请使用新密码登录');
     });
-    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const username = document.querySelector('#auth-username').value.trim().toLowerCase(); const password = document.querySelector('#auth-password').value; const email = { wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', wanghui01: 'wanghui01@dfwsgroup.com', user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal' }[username] || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) ? username : null); const submit = document.querySelector('#auth-submit'); if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } submit.disabled = true; const { data, error } = await client.auth.signInWithPassword({ email, password }); submit.disabled = false; if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; } window.location.reload(); });
+    document.querySelector('#auth-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = document.querySelector('#auth-username').value.trim().toLowerCase();
+      const password = document.querySelector('#auth-password').value;
+      // 已开通邮箱的伙伴可用拼音账号或邮箱登录；管理员测试账号仍沿用内部账号。
+      const aliases = {
+        wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', wanghui01: 'wanghui01@dfwsgroup.com',
+        sunliqiang: 'sunliqiang@dfwsgroup.com', wudan: 'wudan@dfwsgroup.com',
+        user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal'
+      };
+      const email = aliases[username] || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) ? username : null);
+      const submit = document.querySelector('#auth-submit');
+      if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; }
+      submit.disabled = true;
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      submit.disabled = false;
+      if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; }
+      await getProfile(data.user);
+      const partnerPage = document.body.classList.contains('self-review-page');
+      if (profile?.role === 'partner' && !partnerPage) { window.location.replace('self-review.html'); return; }
+      if (profile?.role !== 'partner' && partnerPage) { window.location.replace('index.html'); return; }
+      window.location.reload();
+    });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
     if (isRecoveryRedirect || isInviteRedirect) { showLogin(false); showPasswordReset(true); status('请设置新密码'); return null; }
     await getProfile(session.user);
-    // 伙伴端不能复用管理端会话，避免管理账号绕过伙伴登录入口浏览或编辑自评。
+    // 伙伴账号和管理端各自进入对应入口，避免越权浏览或误入错误页面。
+    if (!document.body.classList.contains('self-review-page') && profile?.role === 'partner') {
+      window.location.replace('self-review.html');
+      return null;
+    }
     if (document.body.classList.contains('self-review-page') && profile?.role !== 'partner') {
-      showLogin(true);
-      status('请使用伙伴账号登录');
+      window.location.replace('index.html');
       return null;
     }
     showLogin(false); return loadState();
