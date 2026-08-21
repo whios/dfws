@@ -113,7 +113,7 @@
       // 已开通邮箱的伙伴可用拼音账号或邮箱登录；管理员测试账号仍沿用内部账号。
       const aliases = {
         wanghui: 'wanghui@dfws.internal', luzong: 'luzong@dfws.internal', wanghui01: 'wanghui01@dfwsgroup.com',
-        sunliqiang: 'sunliqiang@dfwsgroup.com', wudan: 'wudan@dfwsgroup.com', wangqingqing: 'wangqingqing@dfwsgroup.com',
+        sunliqiang: 'sunliqiang@dfwsgroup.com', wudan: 'wudan@dfwsgroup.com', wangqingqing: 'wangqingqing@dfwsgroup.com', limengcong: 'limengcong@dfwsgroup.com',
         user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal'
       };
       const email = aliases[username] || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) ? username : null);
