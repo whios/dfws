@@ -1,33 +1,20 @@
 (() => {
   const localKey = 'dfws-self-assessment-preview';
   const cached = JSON.parse(localStorage.getItem('dfws-v1') || '{}');
-  const fallback = [
-    { owner: '章立合', brand: '先之', department: '销售部' },
-    { owner: '程亚蕊', brand: '最佳东方', department: '续签部' },
-    { owner: '熊思敏', brand: '迈点', department: '研究院' }
-  ];
-  let partners = cached.partners?.length ? cached.partners : fallback;
+  let partners = cached.partners?.length ? cached.partners : [];
   const saved = JSON.parse(localStorage.getItem(localKey) || '{}');
   const $ = (selector) => document.querySelector(selector);
-  const select = $('#partner-select');
-  const brandFilter = $('#brand-filter');
-  const partnerSearch = $('#partner-search');
-  const summary = $('#partner-summary');
   const preview = $('#evidence-preview');
   const link = $('#evidence-link');
   const historySelect = $('#submission-history-select');
   const historyContent = $('#submission-history-content');
   let selfSubmitInFlight = false;
   let skillUploadInFlight = false;
+  let activePartner = null;
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
-  function fuzzyMatch(text, query) {
-    const source = String(text || '').toLowerCase();
-    const terms = String(query || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return terms.every((term) => source.includes(term) || [...source].reduce((cursor, char) => cursor < term.length && char === term[cursor] ? cursor + 1 : cursor, 0) === term.length);
-  }
-  function currentPartner() { return partners[Number(select.value)]; }
+  function currentPartner() { return activePartner; }
   function partnerKey(partner) { return `${partner.owner}|${partner.brand}|${partner.department}`; }
   function setStatus(text) { $('#save-status').textContent = text; }
   function normalizeEvidence(value) {
@@ -36,20 +23,10 @@
     const matched = raw.match(/https?:\/\/[^\s<>"'）】]+/i);
     return matched ? matched[0].replace(/[，。；、]+$/u, '') : raw;
   }
-  function renderPartnerOptions() {
-    const brand = brandFilter.value;
-    const query = partnerSearch.value;
-    const list = partners.map((partner, index) => ({ ...partner, index })).filter((partner) => (brand === '全部品牌' || partner.brand === brand) && fuzzyMatch(`${partner.owner}${partner.brand}${partner.department}`, query));
-    select.disabled = list.length === 0 || window.DfwsCloud?.profile?.role === 'partner';
-    select.innerHTML = list.length ? list.map((partner) => `<option value="${partner.index}">${esc(partner.owner)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`).join('') : '<option value="">未找到匹配伙伴</option>';
-    if (!list.length) { summary.innerHTML = '<div><dt>伙伴信息</dt><dd>请调整品牌或搜索条件</dd></div>'; return; }
-    renderPartner();
-  }
-  function renderPartner() {
+  function loadPartnerDraft() {
     const partner = currentPartner();
     if (!partner) return;
     const value = saved[partnerKey(partner)];
-    summary.innerHTML = `<div><dt>伙伴姓名</dt><dd>${esc(partner.owner)}</dd></div><div><dt>品牌 / 部门</dt><dd>${esc(partner.brand)} · ${esc(partner.department)}</dd></div><div><dt>核验对应</dt><dd>伙伴记录与核验工作台证据</dd></div>`;
     $('#self-level').value = value?.level || '基本达标';
     $('#self-summary').value = value?.summary || '';
     $('#self-outcome').value = value?.outcome || '';
@@ -104,13 +81,6 @@
     try { renderSubmissionHistory(await window.DfwsCloud.listReviewSubmissions()); }
     catch (error) { $('#submission-history-count').textContent = '加载失败'; historyContent.innerHTML = `<p class="empty">${esc(error.message || '提交记录加载失败')}</p>`; }
   }
-  function refreshBrands() {
-    brandFilter.innerHTML = '<option value="全部品牌">全部品牌</option>' + [...new Set(partners.map((partner) => partner.brand))].map((brand) => `<option value="${esc(brand)}">${esc(brand)}</option>`).join('');
-  }
-
-  select.addEventListener('change', renderPartner);
-  brandFilter.addEventListener('change', renderPartnerOptions);
-  partnerSearch.addEventListener('input', renderPartnerOptions);
   $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); });
   $('#skill-file').addEventListener('change', (event) => {
     const file = event.target.files[0];
@@ -188,24 +158,17 @@
     }
   });
   async function init() {
-    refreshBrands();
-    renderPartnerOptions();
     try {
       const remote = await window.DfwsCloud.init();
       if (remote?.partners?.length) {
         partners = remote.partners;
         const profile = window.DfwsCloud.profile;
         if (profile?.role === 'partner') {
-          // 伙伴账号只能浏览、上传和自评其 profile 绑定的唯一伙伴记录。
-          partners = partners.filter((partner) => partner.id === profile.partner_id);
-          brandFilter.value = '全部品牌';
-          brandFilter.disabled = true;
-          partnerSearch.value = '';
-          partnerSearch.disabled = true;
-          select.disabled = true;
+          // 伙伴端始终按账号绑定的唯一伙伴记录提交，不提供切换入口。
+          activePartner = partners.find((partner) => partner.id === profile.partner_id) || null;
+          if (!activePartner) throw new Error('当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。');
+          loadPartnerDraft();
         }
-        refreshBrands();
-        renderPartnerOptions();
       }
       if (window.DfwsCloud.profile) { setStatus('云端已连接'); await Promise.all([loadResources(), loadSubmissionHistory()]); }
     } catch (error) { setStatus('云端连接失败'); $('#form-message').textContent = error.message || '云端连接失败，请稍后重试。'; }
