@@ -9,9 +9,11 @@
   const authRedirect = `${window.location.search}${window.location.hash}`;
   const isRecoveryRedirect = /(?:[?#&])type=recovery(?:[&#]|$)/.test(authRedirect);
   const isInviteRedirect = /(?:[?#&])type=invite(?:[&#]|$)/.test(authRedirect);
-  // Supabase invitations inherit the project Site URL, which is the admin home.
-  // Move partner invitations to the password setup form before the token is consumed.
-  if (isInviteRedirect && !document.body.classList.contains('self-review-page')) {
+  // Supabase may finish verification with either type=invite/recovery or a PKCE code.
+  // All password setup callbacks must enter the partner page, never the admin home.
+  const isCodeRedirect = new URLSearchParams(window.location.search).has('code');
+  const isPasswordSetupRedirect = isRecoveryRedirect || isInviteRedirect || isCodeRedirect;
+  if (isPasswordSetupRedirect && !document.body.classList.contains('self-review-page')) {
     const partnerUrl = new URL('self-review.html', window.location.href);
     partnerUrl.search = window.location.search;
     partnerUrl.hash = window.location.hash;
@@ -131,8 +133,20 @@
     });
     document.querySelector('#sign-out')?.addEventListener('click', async () => { await client.auth.signOut(); window.location.reload(); });
     const { data: { session } } = await client.auth.getSession();
+    if (isPasswordSetupRedirect) {
+      if (!session) {
+        showLogin(false);
+        showPasswordReset(false);
+        document.querySelector('#auth-message').textContent = '链接已失效或无法验证，请联系 AI 应用官重新发送。';
+        status('密码设置链接无效');
+        return null;
+      }
+      showLogin(false);
+      showPasswordReset(true);
+      status('请设置新密码');
+      return null;
+    }
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
-    if (isRecoveryRedirect || isInviteRedirect) { showLogin(false); showPasswordReset(true); status('请设置新密码'); return null; }
     await getProfile(session.user);
     // 伙伴账号和管理端各自进入对应入口，避免越权浏览或误入错误页面。
     if (!document.body.classList.contains('self-review-page') && profile?.role === 'partner') {
