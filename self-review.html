@@ -43,7 +43,12 @@
         <h1>可复用成果提交</h1>
         <p>上传已实际试用的 Skill、智能体或工作流，并写清其他伙伴可以照着使用的步骤。</p>
       </section>
-      <form id="self-review-form" class="self-review-form">
+      <nav class="partner-tabs" aria-label="伙伴端功能">
+        <button class="partner-tab active" type="button" data-partner-view="submit">提交成果</button>
+        <button class="partner-tab" type="button" data-partner-view="submissions">我的提交<span class="tab-count is-hidden" id="submission-returned-count">0</span></button>
+        <button class="partner-tab" type="button" data-partner-view="library">成果库</button>
+      </nav>
+      <form id="self-review-form" class="self-review-form partner-view active" data-partner-panel="submit">
         <section class="self-review-section">
           <div class="section-title"><h2>提交可复用成果</h2><span>审核通过后可供同伴下载</span></div>
           <p class="self-review-tip">请先在 WorkBuddy 中实际试用并调整内容。填写时以“其他伙伴照着能完成”为标准，而不是只写成果名称。</p>
@@ -83,7 +88,12 @@
           <button class="button primary" type="submit">提交成果审核</button>
         </footer>
       </form>
-      <section class="resource-library" aria-labelledby="resource-library-title">
+      <section class="my-submissions partner-view" data-partner-panel="submissions" aria-labelledby="my-submissions-title">
+        <div class="section-title"><div><p class="eyebrow">我的提交</p><h2 id="my-submissions-title">审核进度</h2></div><span id="submission-count" class="sub">加载中</span></div>
+        <p class="submission-intro">这里仅显示你本人提交的成果。被退回后，请按审核说明修改并重新提交。</p>
+        <div id="submission-list" class="submission-list"><p class="empty">正在加载我的提交。</p></div>
+      </section>
+      <section class="resource-library partner-view" data-partner-panel="library" aria-labelledby="resource-library-title">
         <div class="section-title"><div><p class="eyebrow">成果库</p><h2 id="resource-library-title">已发布成果</h2></div><span id="resource-count" class="sub">加载中</span></div>
         <div id="resource-list" class="resource-list"><p class="empty">正在加载成果库。</p></div>
       </section>

@@ -4,6 +4,7 @@
   const $ = (selector) => document.querySelector(selector);
   let resourceSubmitInFlight = false;
   let activePartner = null;
+  let resourceData = { resources: [], downloads: [] };
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
@@ -14,6 +15,26 @@
     // 从聊天分享文案中只保留第一个 http(s) 链接，避免“【WorkBuddy】hi”等前缀进入核验台账。
     const matched = raw.match(/https?:\/\/[^\s<>"'）】]+/i);
     return matched ? matched[0].replace(/[，。；、]+$/u, '') : raw;
+  }
+  function reviewStatusLabel(status) {
+    return ({ pending: '待审核', published: '已发布', rejected: '退回修改', archived: '已下架' })[status] || '待审核';
+  }
+  function showPartnerView(view) {
+    document.querySelectorAll('[data-partner-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.partnerPanel === view));
+    document.querySelectorAll('[data-partner-view]').forEach((tab) => tab.classList.toggle('active', tab.dataset.partnerView === view));
+  }
+  function renderSubmissions(data) {
+    const profile = window.DfwsCloud.profile;
+    const ownResources = data.resources.filter((resource) => resource.uploaded_by === profile?.id);
+    const returned = ownResources.filter((resource) => resource.status === 'rejected');
+    $('#submission-count').textContent = `${ownResources.length} 项提交`;
+    $('#submission-returned-count').textContent = returned.length;
+    $('#submission-returned-count').classList.toggle('is-hidden', returned.length === 0);
+    $('#submission-list').innerHTML = ownResources.length ? ownResources.map((resource) => {
+      const returnedNote = resource.status === 'rejected' ? `<p class="submission-note"><strong>审核说明：</strong>${esc(resource.review_note || '请根据实际使用情况补充材料后重新提交。')}</p>` : '';
+      const publishedNote = resource.status === 'published' ? `<p>审核已通过，当前已被下载 ${resource.download_count} 次。</p>` : '';
+      return `<article class="submission-card"><div><h3>${esc(resource.title)}</h3><p>${esc(resource.file_name)} · 提交于 ${new Date(resource.created_at).toLocaleString('zh-CN', { hour12: false })}</p>${returnedNote}${publishedNote}</div><div class="submission-side"><span class="submission-status ${esc(resource.status)}">${reviewStatusLabel(resource.status)}</span>${resource.status === 'rejected' ? `<button class="button secondary" data-resubmit="${resource.id}">重新提交</button>` : ''}</div></article>`;
+    }).join('') : '<p class="empty">你还没有提交成果。完成提交后，审核进度会显示在这里。</p>';
   }
   function renderResources(data) {
     const list = data.resources.filter((resource) => resource.status === 'published');
@@ -42,8 +63,25 @@
     };
   }
   async function loadResources() {
-    try { renderResources(await window.DfwsCloud.listSkillResources()); } catch (error) { $('#resource-list').innerHTML = `<p class="empty">${esc(error.message || '成果库加载失败')}</p>`; }
+    try {
+      resourceData = await window.DfwsCloud.listSkillResources();
+      renderResources(resourceData);
+      renderSubmissions(resourceData);
+    } catch (error) {
+      $('#resource-list').innerHTML = `<p class="empty">${esc(error.message || '成果库加载失败')}</p>`;
+      $('#submission-list').innerHTML = `<p class="empty">${esc(error.message || '我的提交加载失败')}</p>`;
+    }
   }
+  document.querySelectorAll('[data-partner-view]').forEach((tab) => tab.addEventListener('click', () => showPartnerView(tab.dataset.partnerView)));
+  $('#submission-list').addEventListener('click', (event) => {
+    const id = event.target.dataset.resubmit;
+    if (!id) return;
+    const resource = resourceData.resources.find((item) => item.id === id);
+    showPartnerView('submit');
+    $('#skill-title').value = resource ? `${resource.title}（修改版）` : '';
+    $('#form-message').textContent = '请根据审核说明修改后，重新上传成果文件并提交。';
+    $('#skill-title').focus();
+  });
   $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); });
   $('#skill-file').addEventListener('change', (event) => {
     const file = event.target.files[0];
