@@ -77,9 +77,20 @@
     const id = event.target.dataset.resubmit;
     if (!id) return;
     const resource = resourceData.resources.find((item) => item.id === id);
+    const fields = parseResourceDescription(resource?.description);
     showPartnerView('submit');
     $('#skill-title').value = resource ? `${resource.title}（修改版）` : '';
-    $('#form-message').textContent = '请根据审核说明修改后，重新上传成果文件并提交。';
+    $('#skill-type').value = fields.type || 'Skill';
+    $('#skill-scenario').value = fields.scenario || '';
+    $('#skill-steps').value = fields.steps || '';
+    $('#skill-input').value = fields.input || '';
+    $('#skill-output').value = fields.output || '';
+    $('#skill-guardrails').value = fields.guardrails || '';
+    $('#evidence-url').value = fields.evidence || '';
+    $('#skill-tested').checked = false;
+    $('#skill-file').value = '';
+    $('#skill-file-status').textContent = '请重新选择修改后的成果文件';
+    $('#form-message').textContent = '已带回原提交内容。请按审核说明修改，并重新选择成果文件后提交。';
     $('#skill-title').focus();
   });
   $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); });
@@ -97,6 +108,24 @@
       $('#skill-guardrails').value.trim() ? `使用限制与数据权限：${$('#skill-guardrails').value.trim()}` : '',
       `核验证据：${evidence}`
     ].filter(Boolean).join('\n\n');
+  }
+  function parseResourceDescription(description) {
+    const fields = {};
+    const labels = {
+      '成果类型': 'type',
+      '适用场景': 'scenario',
+      '使用步骤': 'steps',
+      '输入要求与示例': 'input',
+      '预期输出与示例': 'output',
+      '使用限制与数据权限': 'guardrails',
+      '核验证据': 'evidence'
+    };
+    const source = String(description || '').trim();
+    source.split(/\n\n+/).forEach((part) => {
+      const matched = part.match(/^([^：]+)：/);
+      if (matched && labels[matched[1]]) fields[labels[matched[1]]] = part.slice(matched[0].length).trim();
+    });
+    return fields;
   }
   $('#self-review-form').addEventListener('submit', async (event) => {
     event.preventDefault();
