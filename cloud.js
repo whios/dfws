@@ -251,7 +251,12 @@
     const { error } = await client.from('skill_resources').update({ status: values.status, review_note: values.reviewNote || null, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
   }
+  async function editSkill(id, values) {
+    if (!staff()) throw new Error('当前账号没有编辑成果的权限。');
+    const { error } = await client.from('skill_resources').update({ title: values.title, description: values.description, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();
