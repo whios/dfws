@@ -173,6 +173,13 @@
     const { error } = await client.from('profiles').update(values).eq('id', id);
     if (error) throw error;
   }
+  async function deleteAsset(id) {
+    if (!staff()) throw new Error('当前账号没有删除云端台账的权限。');
+    if (!isUuid(id)) throw new Error('该资产尚未同步到云端，无法删除。');
+    const { data, error } = await client.from('assets').delete().eq('id', id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('未能删除该资产，请刷新后重试。');
+  }
   async function inviteMember(values) {
     if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
@@ -281,5 +288,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();

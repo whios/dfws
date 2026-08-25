@@ -113,6 +113,9 @@ a.nav-item { text-decoration: none; }
 .skill-evidence-link { width: fit-content; }
 .skill-card-details { border-top: 1px solid var(--line); padding-top: 10px; }
 .skill-card-details summary { color: var(--teal); cursor: pointer; font-size: 12px; font-weight: 650; }
+.asset-actions { white-space: nowrap; }
+.asset-actions .action-link + .action-link { margin-left: 10px; }
+.danger-action { color: var(--red); }
 .skill-detail-grid { display: grid; gap: 10px; margin-top: 10px; }
 .skill-detail { display: grid; gap: 3px; }
 .skill-detail strong { color: var(--muted); font-size: 11px; }
