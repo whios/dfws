@@ -126,10 +126,9 @@ async function sendSmtpMail({ from, to, subject, text, html }) {
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: 8bit',
       '', html,
-      '--dfws-boundary--',
-      '.'
+      '--dfws-boundary--'
     ].join('\r\n').replace(/\r?\n\./g, '\r\n..');
-    expectSmtp(await writeSmtp(socket, body), [250]);
+    expectSmtp(await writeSmtp(socket, `${body}\r\n.`), [250]);
     await writeSmtp(socket, 'QUIT').catch(() => {});
   } finally {
     socket.destroy();
