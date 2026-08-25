@@ -118,7 +118,8 @@
         sunliqiang: 'sunliqiang@dfwsgroup.com', wudan: 'wudan@dfwsgroup.com', wangqingqing: 'wangqingqing@dfwsgroup.com', limengcong: 'limengcong@dfwsgroup.com', qiujuan: 'qiujuan@dfwsgroup.com', zhangzhe: 'zhangzhe@dfwsgroup.com',
         user01: 'user01@dfws.internal', user02: 'user02@dfws.internal', user03: 'user03@dfws.internal'
       };
-      const email = aliases[username] || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) ? username : null);
+      // 公司邮箱按拼音命名时，可直接输入邮箱前缀；保留既有内部管理和测试账号映射。
+      const email = aliases[username] || (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) ? username : (/^[a-z0-9._-]+$/.test(username) ? `${username}@dfwsgroup.com` : null));
       const submit = document.querySelector('#auth-submit');
       if (!email) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; }
       submit.disabled = true;
@@ -171,6 +172,22 @@
     if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
     const { error } = await client.from('profiles').update(values).eq('id', id);
     if (error) throw error;
+  }
+  async function inviteMember(values) {
+    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+      throw new Error('本地预览不发送邀请邮件，请使用 dfws.wendywang.club 的管理端操作。');
+    }
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/invite-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(values)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '新增人员失败');
+    return result;
   }
   async function saveReview(owner, values) {
     const role = profile?.role;
@@ -258,5 +275,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
+  window.DfwsCloud = { init, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();

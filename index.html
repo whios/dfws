@@ -14,7 +14,7 @@
         <p class="eyebrow">AI 伙伴核实</p>
         <h1>登录管理系统</h1>
         <p>请输入管理账号后查看和维护云端数据。共享盘中的证据文件不会上传。</p>
-        <label>管理账号<input id="auth-username" autocomplete="username" required placeholder="管理账号" /></label>
+        <label>登录名或邮箱<input id="auth-username" autocomplete="username" required placeholder="拼音登录名或公司邮箱" /></label>
         <label>密码<span class="password-field"><input id="auth-password" type="password" autocomplete="current-password" required placeholder="密码" /><button class="password-toggle" type="button" data-password-toggle aria-label="显示密码" title="显示密码"><i data-lucide="eye" aria-hidden="true"></i></button></span></label>
         <button class="button primary" id="auth-submit" type="submit">登录</button>
         <p id="auth-message" class="sub"></p>
@@ -69,6 +69,7 @@
     <script src="supabase-config.js"></script>
     <script src="cloud.js"></script>
     <script src="app.js"></script>
+    <script src="personnel.js"></script>
     <script src="readonly.js"></script>
     <script src="review-permissions.js"></script>
     <script src="dialog-controls.js"></script>
