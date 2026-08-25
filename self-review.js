@@ -41,6 +41,20 @@
       return `<article class="submission-card"><div><h3>${esc(resource.title)}</h3><p>${esc(resource.file_name)} · 提交于 ${new Date(resource.created_at).toLocaleString('zh-CN', { hour12: false })}</p>${returnedNote}${publishedNote}</div><div class="submission-side"><span class="submission-status ${esc(resource.status)}">${reviewStatusLabel(resource.status)}</span>${resource.status === 'rejected' ? `<button class="button secondary" data-resubmit="${resource.id}">重新提交</button>` : ''}</div></article>`;
     }).join('') : '<p class="empty">你还没有提交成果。完成提交后，审核进度会显示在这里。</p>';
   }
+  function renderNotifications(notifications) {
+    const unread = notifications.filter((item) => !item.is_read).length;
+    $('#notification-count').textContent = unread ? `${unread} 条未读` : '暂无未读';
+    $('#notification-unread-count').textContent = unread;
+    $('#notification-unread-count').classList.toggle('is-hidden', unread === 0);
+    $('#notification-list').innerHTML = notifications.length ? notifications.map((item) => `<article class="notification-item ${item.is_read ? '' : 'unread'}"><div><h3>${esc(item.title)}</h3><p>${esc(item.body)}</p></div><div class="notification-side"><time>${new Date(item.created_at).toLocaleString('zh-CN', { hour12: false })}</time>${item.is_read ? '' : `<button class="action-link" data-notification-read="${item.id}">标为已读</button>`}</div></article>`).join('') : '<p class="empty">暂无审核通知。</p>';
+  }
+  async function loadNotifications() {
+    try { renderNotifications(await window.DfwsCloud.listNotifications()); }
+    catch (error) {
+      $('#notification-count').textContent = '通知加载失败';
+      $('#notification-list').innerHTML = `<p class="empty">${esc(error.message || '通知加载失败')}</p>`;
+    }
+  }
   function renderResources(data) {
     const list = data.resources.filter((resource) => resource.status === 'published');
     $('#resource-count').textContent = `${list.length} 项可下载`;
@@ -83,7 +97,13 @@
       $('#submission-list').innerHTML = `<p class="empty">${esc(error.message || '我的提交加载失败')}</p>`;
     }
   }
-  document.querySelectorAll('[data-partner-view]').forEach((tab) => tab.addEventListener('click', () => showPartnerView(tab.dataset.partnerView)));
+  document.querySelectorAll('[data-partner-view]').forEach((tab) => tab.addEventListener('click', () => { showPartnerView(tab.dataset.partnerView); if (tab.dataset.partnerView === 'notifications') loadNotifications(); }));
+  $('#notification-list').addEventListener('click', async (event) => {
+    const id = event.target.dataset.notificationRead;
+    if (!id) return;
+    try { event.target.disabled = true; await window.DfwsCloud.markNotificationRead(id); await loadNotifications(); }
+    catch (error) { event.target.disabled = false; $('#form-message').textContent = error.message || '通知状态更新失败，请稍后重试。'; }
+  });
   document.querySelectorAll('.form-accordion').forEach((block) => block.addEventListener('toggle', syncSubmissionSteps));
   $('#self-review-form').addEventListener('invalid', (event) => {
     const block = event.target.closest('.form-accordion');
@@ -196,7 +216,7 @@
           if (!activePartner) throw new Error('当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。');
         }
       }
-      if (window.DfwsCloud.profile) { setStatus('云端已连接'); await loadResources(); }
+      if (window.DfwsCloud.profile) { setStatus('云端已连接'); await Promise.all([loadResources(), loadNotifications()]); }
     } catch (error) { setStatus('云端连接失败'); $('#form-message').textContent = error.message || '云端连接失败，请稍后重试。'; }
   }
   init();

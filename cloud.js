@@ -225,6 +225,17 @@
     if (error) throw error;
     return (data || []).map((item) => ({ id: item.id, partnerId: item.partner_id, selfLevel: item.self_level, selfReview: item.self_review, evidence: item.evidence_path, submittedAt: item.submitted_at, owner: item.partners?.owner_name, brand: item.partners?.brand, department: item.partners?.department }));
   }
+  async function listNotifications() {
+    if (!profile) throw new Error('请先登录后查看通知。');
+    const { data, error } = await client.from('notifications').select('id, skill_resource_id, kind, title, body, is_read, created_at').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+  async function markNotificationRead(id) {
+    if (!profile) throw new Error('请先登录后处理通知。');
+    const { error } = await client.from('notifications').update({ is_read: true }).eq('id', id);
+    if (error) throw error;
+  }
   async function listSkillResources(includeDownloads = false) {
     const { data: resources, error } = await client.from('skill_resources').select('*, partners(owner_name, brand, department)').order('created_at', { ascending: false });
     if (error) throw error;
@@ -292,5 +303,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();

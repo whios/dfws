@@ -46,6 +46,7 @@
       <nav class="partner-tabs" aria-label="伙伴端功能">
         <button class="partner-tab active" type="button" data-partner-view="submit">提交成果</button>
         <button class="partner-tab" type="button" data-partner-view="submissions">我的提交<span class="tab-count is-hidden" id="submission-returned-count">0</span></button>
+        <button class="partner-tab" type="button" data-partner-view="notifications">通知<span class="tab-count is-hidden" id="notification-unread-count">0</span></button>
         <button class="partner-tab" type="button" data-partner-view="library">成果库</button>
       </nav>
       <form id="self-review-form" class="self-review-form partner-view active" data-partner-panel="submit">
@@ -108,6 +109,10 @@
         <div class="section-title"><div><p class="eyebrow">我的提交</p><h2 id="my-submissions-title">审核进度</h2></div><span id="submission-count" class="sub">加载中</span></div>
         <p class="submission-intro">这里仅显示你本人提交的成果。被退回后，请按审核说明修改并重新提交。</p>
         <div id="submission-list" class="submission-list"><p class="empty">正在加载我的提交。</p></div>
+      </section>
+      <section class="notifications partner-view" data-partner-panel="notifications" aria-labelledby="notifications-title">
+        <div class="section-title"><div><p class="eyebrow">通知</p><h2 id="notifications-title">审核提醒</h2></div><span id="notification-count" class="sub">加载中</span></div>
+        <div id="notification-list" class="notification-list"><p class="empty">正在加载通知。</p></div>
       </section>
       <section class="resource-library partner-view" data-partner-panel="library" aria-labelledby="resource-library-title">
         <div class="section-title"><div><p class="eyebrow">成果库</p><h2 id="resource-library-title">已发布成果</h2></div><span id="resource-count" class="sub">加载中</span></div>

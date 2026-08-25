@@ -79,6 +79,16 @@
 .submission-status.rejected { background: var(--red-soft); color: var(--red); }
 .submission-status.archived { background: #edf1f0; color: #556064; }
 .submission-note { background: var(--red-soft); border-left: 3px solid var(--red); color: #6d302a !important; padding: 8px 10px; }
+.notifications { background: #fff; border: 1px solid var(--line); border-top: 2px solid var(--teal); padding-top: 20px; }
+.notifications .section-title { padding: 0 20px; }
+.notifications .section-title > div { display: grid; gap: 1px; }
+.notifications .section-title h2 { margin: 0; }
+.notification-item { align-items: flex-start; border-top: 1px solid var(--line); display: flex; gap: 14px; justify-content: space-between; padding: 16px 20px; }
+.notification-item.unread { background: #f5fbfa; }
+.notification-item h3 { font-size: 14px; margin: 0; }
+.notification-item p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 5px 0 0; white-space: pre-line; }
+.notification-item time { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.notification-side { align-items: end; display: grid; gap: 7px; justify-items: end; }
 .self-review-footer { align-items: center; display: flex; justify-content: space-between; margin-top: 4px; }
 .self-review-footer p { color: var(--muted); font-size: 12px; margin: 0; }
 @media (max-width: 600px) { .self-review-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }.self-review-header .brand { order: -1; width: 100%; }.partner-tabs { gap: 14px; overflow-x: auto; }.partner-tab { white-space: nowrap; }.submission-steps { grid-template-columns: 1fr; }.form-accordion summary small { display: none; }.self-review-footer,.resource-action,.resource-card-head { align-items: stretch; flex-direction: column; gap: 12px; }.self-review-footer .button,.resource-action .button { width: 100%; }.submission-card,.resource-detail-grid { grid-template-columns: 1fr; }.resource-detail:nth-child(5), .resource-detail:nth-child(6), .resource-evidence { grid-column: auto; }.resource-download,.submission-side { justify-items: start; } }
