@@ -257,11 +257,17 @@
     return data;
   }
   async function downloadSkill(resource) {
+    const { data, error } = await client.storage.from('skill-files').createSignedUrl(resource.file_path, 60, { download: resource.file_name || 'skill-file' });
+    if (error) throw error;
     const { error: logError } = await client.rpc('record_skill_download', { resource_id: resource.id });
     if (logError) throw logError;
-    const { data, error } = await client.storage.from('skill-files').createSignedUrl(resource.file_path, 60);
-    if (error) throw error;
-    return data.signedUrl;
+    const link = document.createElement('a');
+    link.href = data.signedUrl;
+    link.download = resource.file_name || 'skill-file';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
   async function reviewSkill(id, values) {
     if (!staff()) throw new Error('当前账号没有审核成果的权限。');

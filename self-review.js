@@ -50,8 +50,7 @@
       try {
         event.target.disabled = true;
         event.target.textContent = '准备下载...';
-        const url = await window.DfwsCloud.downloadSkill(resource);
-        window.open(url, '_blank', 'noopener');
+        await window.DfwsCloud.downloadSkill(resource);
         event.target.textContent = '下载';
         event.target.disabled = false;
         renderResources(await window.DfwsCloud.listSkillResources());

@@ -98,6 +98,19 @@ a.nav-item { text-decoration: none; }
 .personnel-existing { display: grid; gap: 7px; margin-top: 14px; }
 .personnel-existing select { border: 1px solid var(--line); border-radius: 5px; font: inherit; height: 38px; padding: 0 9px; width: 100%; }
 .form-grid[hidden], .personnel-existing[hidden] { display: none !important; }
+.skill-library-summary { align-items: center; background: var(--teal-soft); border: 1px solid #c7e2de; border-radius: 6px; display: flex; gap: 18px; justify-content: space-between; margin-bottom: 16px; padding: 12px 14px; }
+.skill-library-summary strong { color: var(--teal); font-size: 20px; }
+.skill-card-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
+.skill-library-card { display: flex; flex-direction: column; gap: 13px; min-height: 260px; padding: 16px; }
+.skill-library-card h3 { font-size: 16px; line-height: 1.35; margin: 0; }
+.skill-library-card p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 5px 0 0; }
+.skill-card-top, .skill-card-meta, .skill-card-actions { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
+.skill-card-meta { align-items: flex-start; border-top: 1px solid var(--line); display: grid; font-size: 12px; gap: 4px; margin-top: auto; padding-top: 11px; }
+.skill-card-actions { align-items: flex-end; border-top: 1px solid var(--line); flex-wrap: wrap; padding-top: 11px; }
+.skill-card-actions select { border: 1px solid var(--line); border-radius: 5px; font: inherit; max-width: 132px; padding: 6px; }
+.skill-card-actions .button { padding: 7px 9px; }
+.skill-card-note { border: 1px solid var(--line); border-radius: 5px; font: inherit; min-height: 54px; padding: 7px; resize: vertical; width: 100%; }
+@media (max-width: 600px) { .skill-library-summary { align-items: flex-start; flex-direction: column; gap: 4px; }.skill-card-grid { grid-template-columns: 1fr; }.skill-card-actions { align-items: stretch; }.skill-card-actions .button { flex: 1; } }
 @media (max-width: 960px) { .permission-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .permission-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }.permission-kpi { min-height: 90px; padding: 12px; }.permission-kpi strong { font-size: 23px; }.partner-picker-tools input { min-width: 100%; }.partner-picker-item { align-items: flex-start; flex-direction: column; gap: 3px; }.partner-picker-item span { padding-left: 8px; } }
 .step { background: var(--teal-soft); border-radius: 4px; color: var(--teal); font-size: 11px; font-weight: 800; padding: 3px 5px; }
