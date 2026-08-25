@@ -209,6 +209,7 @@ export default async function handler(request, response) {
       } catch { /* 保留领取标记，避免不确定状态下重复发送。 */ }
     }
     const message = error?.message || '审核邮件发送失败';
+    console.error('Skill review email delivery failed', { name: error?.name, code: error?.code, message });
     return reply(response, 500, { error: message });
   }
 }
