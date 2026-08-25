@@ -71,8 +71,8 @@ function skills() {
       event.target.disabled = true;
       if (event.target.dataset.downloadSkill) { event.target.textContent = '准备下载...'; await window.DfwsCloud.downloadSkill(resource); toast('文件已开始下载'); await load(); return; }
       event.target.textContent = $(`[data-skill-status="${id}"]`).value === 'published' ? '正在入账...' : '保存中...';
-      await window.DfwsCloud.reviewSkill(id, { status: $(`[data-skill-status="${id}"]`).value, reviewNote: $(`[data-skill-note="${id}"]`).value });
-      toast('审核状态已保存'); await load();
+      const result = await window.DfwsCloud.reviewSkill(id, { status: $(`[data-skill-status="${id}"]`).value, reviewNote: $(`[data-skill-note="${id}"]`).value });
+      toast(result.email === 'sent' ? '审核状态已保存，站内通知和邮件已发送' : result.email === 'failed' ? `审核状态已保存；邮件未发出：${result.message}` : '审核状态已保存'); await load();
     } catch (error) { toast(error.message || '操作失败'); }
     finally { event.target.disabled = false; }
   };

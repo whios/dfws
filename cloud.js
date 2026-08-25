@@ -293,8 +293,25 @@
   }
   async function reviewSkill(id, values) {
     if (!staff()) throw new Error('当前账号没有审核成果的权限。');
+    const { data: before, error: beforeError } = await client.from('skill_resources').select('status').eq('id', id).single();
+    if (beforeError) throw beforeError;
     const { error } = await client.from('skill_resources').update({ status: values.status, review_note: values.reviewNote || null, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
+    const sendsReviewEmail = before.status !== values.status && ['published', 'rejected'].includes(values.status);
+    if (!sendsReviewEmail) return { email: 'not_needed' };
+    try {
+      const { data: { session } } = await client.auth.getSession();
+      const response = await fetch('/api/staff/send-skill-review-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ resourceId: id, status: values.status })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) return { email: 'failed', message: body.error || '审核邮件发送失败' };
+      return { email: body.delivered ? 'sent' : 'not_needed', message: body.message };
+    } catch (mailError) {
+      return { email: 'failed', message: mailError.message || '审核邮件发送失败' };
+    }
   }
   async function editSkill(id, values) {
     if (!staff()) throw new Error('当前账号没有编辑成果的权限。');
