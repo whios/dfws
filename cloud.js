@@ -54,7 +54,7 @@
     const partners = partnersRes.data.map((p) => ({ id: p.id, owner: p.owner_name, brand: p.brand, department: p.department }));
     const reviews = {};
     reviewsRes.data.forEach((r) => { const partner = partnersRes.data.find((p) => p.id === r.partner_id); if (partner) reviews[partner.owner_name] = { self: r.self_review, selfLevel: r.self_level, manager: r.manager_review, managerLevel: r.manager_level, officer: r.officer_review, officerLevel: r.officer_level }; });
-    return { partners, reviews, assets: assetsRes.data.map((a) => ({ id: a.id, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.verification_level, status: a.verification_status, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: risksRes.data.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })) };
+    return { partners, reviews, assets: assetsRes.data.map((a) => ({ id: a.id, resourceId: a.skill_resource_id || null, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.verification_level, status: a.verification_status, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: risksRes.data.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })) };
   }
 
   async function writeState(state) {
@@ -65,7 +65,7 @@
     const savedPartners = await client.from('partners').select('*');
     if (savedPartners.error) throw savedPartners.error;
     const index = byPartner(savedPartners.data);
-    const assetsResult = await client.from('assets').upsert(state.assets.map((a) => { const partner = index.get(`${a.owner}|${a.brand}`); return { ...(isUuid(a.id) ? { id: a.id } : {}), partner_id: partner?.id || null, name: a.name, asset_type: a.type, brand: a.brand, department: a.department, owner_name: a.owner, platform: a.platform || null, task: a.task, calls: Number(a.calls) || 0, verification_level: a.level, verification_status: a.status, evidence_path: a.evidence || null, review_note: a.review || null, checks: a.checks || [] }; })).select();
+    const assetsResult = await client.from('assets').upsert(state.assets.map((a) => { const partner = index.get(`${a.owner}|${a.brand}`); return { ...(isUuid(a.id) ? { id: a.id } : {}), ...(isUuid(a.resourceId) ? { skill_resource_id: a.resourceId } : {}), partner_id: partner?.id || null, name: a.name, asset_type: a.type, brand: a.brand, department: a.department, owner_name: a.owner, platform: a.platform || null, task: a.task, calls: Number(a.calls) || 0, verification_level: a.level, verification_status: a.status, evidence_path: a.evidence || null, review_note: a.review || null, checks: a.checks || [] }; })).select();
     if (assetsResult.error) throw assetsResult.error;
     const risksResult = await client.from('risks').upsert(state.risks.map((r) => ({ ...(isUuid(r.id) ? { id: r.id } : {}), kind: r.kind, priority: r.priority, brand: r.brand, owner_name: r.owner, due_date: r.due, status: r.status, note: r.note }))).select();
     if (risksResult.error) throw risksResult.error;

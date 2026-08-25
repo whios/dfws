@@ -2,7 +2,7 @@
 function skills() {
   const view = $('#skills');
   if (!window.DfwsCloud?.staff()) { view.innerHTML = '<div class="empty">仅 AI 应用官、负责人和品牌管理员可审核成果并查看下载明细。</div>'; return; }
-  const statusOptions = [['pending', '待审核'], ['published', '已发布'], ['rejected', '退回修改'], ['archived', '已下架']];
+  const statusOptions = [['pending', '待审核'], ['published', '已发布并入账'], ['rejected', '退回修改'], ['archived', '已下架']];
   const statusName = new Map(statusOptions);
   let resources = [];
   let editingSkillId = null;
@@ -12,7 +12,7 @@ function skills() {
     return matched?.[1]?.trim() || '';
   };
   const detail = (label, value) => `<div class="skill-detail"><strong>${label}</strong><span>${esc(value || '未填写')}</span></div>`;
-  view.innerHTML = `<div class="toolbar"><div><strong>成果库</strong><div class="sub">审核、发布和下载记录统一管理；点击下载会直接保存原文件。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button></div><div class="toolbar" aria-label="成果库筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
+  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">发布即自动写入资产台账；点击下载会直接保存原文件。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
   const render = () => {
     const query = $('#skill-search').value.trim().toLowerCase();
     const brand = $('#skill-brand').value;
@@ -23,7 +23,7 @@ function skills() {
     });
     const published = resources.filter((resource) => resource.status === 'published').length;
     $('#skill-filter-count').textContent = `当前显示 ${filtered.length} / ${resources.length} 项成果`;
-    $('#skill-library-summary').innerHTML = `<span><strong>${published}</strong> 项已发布</span><span class="sub">待审核 ${resources.filter((resource) => resource.status === 'pending').length} 项 · 本页累计下载 ${resources.reduce((sum, resource) => sum + Number(resource.download_count || 0), 0)} 次</span>`;
+    $('#skill-library-summary').innerHTML = `<span><strong>${published}</strong> 项已发布并入账</span><span class="sub">待审核 ${resources.filter((resource) => resource.status === 'pending').length} 项 · 本页累计下载 ${resources.reduce((sum, resource) => sum + Number(resource.download_count || 0), 0)} 次</span>`;
     $('#skill-card-grid').innerHTML = filtered.map((resource) => {
       const type = extract(resource.description, '成果类型') || '成果';
       const scenario = extract(resource.description, '适用场景') || resource.description || '尚未填写使用场景';
@@ -70,7 +70,7 @@ function skills() {
     try {
       event.target.disabled = true;
       if (event.target.dataset.downloadSkill) { event.target.textContent = '准备下载...'; await window.DfwsCloud.downloadSkill(resource); toast('文件已开始下载'); await load(); return; }
-      event.target.textContent = '保存中...';
+      event.target.textContent = $(`[data-skill-status="${id}"]`).value === 'published' ? '正在入账...' : '保存中...';
       await window.DfwsCloud.reviewSkill(id, { status: $(`[data-skill-status="${id}"]`).value, reviewNote: $(`[data-skill-note="${id}"]`).value });
       toast('审核状态已保存'); await load();
     } catch (error) { toast(error.message || '操作失败'); }
@@ -87,3 +87,4 @@ function skills() {
   $('#refresh-skills').onclick = load;
   load();
 }
+document.querySelector('[data-view="skills"]')?.addEventListener('click', () => { $('#page-title').textContent = '成果审核'; });
