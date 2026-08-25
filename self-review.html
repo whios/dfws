@@ -52,45 +52,52 @@
         <section class="self-review-section">
           <div class="section-title"><h2>提交成果</h2><span>审核通过后可供同伴下载</span></div>
           <p class="self-review-tip">提交前请先在 WorkBuddy 中实际试用并调整内容，确认其他伙伴可以照着步骤独立完成。</p>
-          <div class="form-block">
-            <h3>基础信息</h3>
-            <label>成果名称
-              <input id="skill-title" maxlength="120" required placeholder="例如：客户方案生成 Skill" />
-            </label>
-            <label>成果类型
-              <select id="skill-type" required><option>Skill</option><option>智能体</option><option>工作流</option><option>提示词模板</option><option>其他</option></select>
-            </label>
-            <label>适用场景
-              <textarea id="skill-scenario" required placeholder="它解决什么具体业务问题？适合哪些岗位或业务环节使用？"></textarea>
-            </label>
-          </div>
-          <div class="form-block">
-            <h3>使用说明</h3>
-            <label>使用步骤
-              <textarea id="skill-steps" required placeholder="请按 1、2、3 步写清楚：打开哪里、输入什么、如何获取和使用结果。"></textarea>
-            </label>
-            <label>使用前准备
-              <textarea id="skill-input" required placeholder="使用前需要准备什么资料？请给出可直接参考的内容示例。"></textarea>
-            </label>
-            <label>使用结果
-              <textarea id="skill-output" required placeholder="完成后会得到什么结果？请给出一份合格结果的示例或判断标准。"></textarea>
-            </label>
-            <label>使用限制与数据权限
-              <textarea id="skill-guardrails" placeholder="哪些内容不能输入？是否仅限内部使用？出现异常时如何人工处理？"></textarea>
-            </label>
-          </div>
-          <div class="form-block">
-            <h3>证据与附件</h3>
-            <label>核验证据链接或共享盘路径
-              <input id="evidence-url" type="text" required placeholder="https://... 或 \\server\share\..." />
-            </label>
-            <p class="field-hint">可填写智能体链接、共享盘文件夹、样例输入输出或实际运行记录。粘贴聊天分享文案时，系统会自动提取其中的 http 链接。</p>
-            <label>上传 Skill 文件
-              <input id="skill-file" type="file" required accept=".zip,.json,.txt,.md,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" />
-            </label>
-            <p class="field-hint">支持压缩包、文档、表格和演示文件等格式，单个文件不超过 200MB。</p>
-            <label class="check-field"><input id="skill-tested" type="checkbox" required />我已实际试用，确认上述步骤可用，且内容不含不应共享的数据。</label>
-          </div>
+          <div class="submission-steps" aria-label="提交步骤"><span class="active">1 基础信息</span><span>2 使用说明</span><span>3 证据与文件</span></div>
+          <details class="form-block form-accordion" open>
+            <summary><span><b>1</b>基础信息</span><small>名称、类型和适用场景</small></summary>
+            <div class="form-block-content">
+              <label>成果名称
+                <input id="skill-title" maxlength="120" required placeholder="例如：客户方案生成 Skill" />
+              </label>
+              <label>成果类型
+                <select id="skill-type" required><option>Skill</option><option>智能体</option><option>工作流</option><option>提示词模板</option><option>其他</option></select>
+              </label>
+              <label>适用场景
+                <textarea id="skill-scenario" required placeholder="它解决什么具体业务问题？适合哪些岗位或业务环节使用？"></textarea>
+              </label>
+            </div>
+          </details>
+          <details class="form-block form-accordion">
+            <summary><span><b>2</b>使用说明</span><small>让同伴可以照着复用</small></summary>
+            <div class="form-block-content">
+              <label>使用步骤
+                <textarea id="skill-steps" required placeholder="请按 1、2、3 步写清楚：打开哪里、输入什么、如何获取和使用结果。"></textarea>
+              </label>
+              <label>使用前准备
+                <textarea id="skill-input" required placeholder="使用前需要准备什么资料？请给出可直接参考的内容示例。"></textarea>
+              </label>
+              <label>使用结果
+                <textarea id="skill-output" required placeholder="完成后会得到什么结果？请给出一份合格结果的示例或判断标准。"></textarea>
+              </label>
+              <label>使用限制与数据权限
+                <textarea id="skill-guardrails" placeholder="哪些内容不能输入？是否仅限内部使用？出现异常时如何人工处理？"></textarea>
+              </label>
+            </div>
+          </details>
+          <details class="form-block form-accordion">
+            <summary><span><b>3</b>证据与附件</span><small>链接、文件与提交确认</small></summary>
+            <div class="form-block-content">
+              <label>核验证据链接或共享盘路径
+                <input id="evidence-url" type="text" required placeholder="https://... 或 \\server\share\..." />
+              </label>
+              <p class="field-hint">可填写智能体链接、共享盘文件夹、样例输入输出或实际运行记录。粘贴聊天分享文案时，系统会自动提取其中的 http 链接。</p>
+              <label>上传 Skill 文件
+                <input id="skill-file" type="file" required accept=".zip,.json,.txt,.md,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" />
+              </label>
+              <p class="field-hint">支持压缩包、文档、表格和演示文件等格式，单个文件不超过 200MB。</p>
+              <label class="check-field"><input id="skill-tested" type="checkbox" required />我已实际试用，确认上述步骤可用，且内容不含不应共享的数据。</label>
+            </div>
+          </details>
         </section>
         <footer class="self-review-footer">
           <p id="form-message">正在连接云端。</p><span class="sub" id="skill-file-status">尚未选择文件</span>

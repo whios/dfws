@@ -23,6 +23,11 @@
     document.querySelectorAll('[data-partner-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.partnerPanel === view));
     document.querySelectorAll('[data-partner-view]').forEach((tab) => tab.classList.toggle('active', tab.dataset.partnerView === view));
   }
+  function syncSubmissionSteps() {
+    const blocks = [...document.querySelectorAll('.form-accordion')];
+    const openIndex = blocks.findIndex((block) => block.open);
+    document.querySelectorAll('.submission-steps span').forEach((step, index) => step.classList.toggle('active', index === (openIndex < 0 ? 0 : openIndex)));
+  }
   function renderSubmissions(data) {
     const profile = window.DfwsCloud.profile;
     const ownResources = data.resources.filter((resource) => resource.uploaded_by === profile?.id);
@@ -48,7 +53,7 @@
         ? `<a class="action-link" href="${esc(evidence)}" target="_blank" rel="noopener">打开核验证据</a><span>${esc(evidence)}</span>`
         : `<span>${esc(evidence || '未填写')}</span>`;
       const detail = (label, value) => `<div class="resource-detail"><strong>${label}</strong><span>${esc(value || '未填写')}</span></div>`;
-      return `<article class="resource-card"><div class="resource-card-head"><div><h3>${esc(resource.title)}</h3><span class="resource-meta">${esc(partner?.owner_name || '未关联伙伴')} · ${esc(partner?.brand || '未填写品牌')} · ${esc(resource.file_name)}</span></div><div class="resource-download"><span class="sub">已下载 ${resource.download_count} 次</span><button class="button secondary" data-download="${resource.id}">下载文件</button></div></div><div class="resource-detail-grid">${detail('成果类型', fields.type)}${detail('适用场景', fields.scenario)}${detail('使用前准备', fields.input)}${detail('使用结果', fields.output)}${detail('使用步骤', fields.steps)}${detail('使用限制与数据权限', fields.guardrails)}<div class="resource-detail resource-evidence"><strong>核验证据</strong>${evidenceView}</div></div></article>`;
+      return `<article class="resource-card"><div class="resource-card-head"><div><h3>${esc(resource.title)}</h3><span class="resource-meta">${esc(partner?.owner_name || '未关联伙伴')} · ${esc(partner?.brand || '未填写品牌')} · ${esc(resource.file_name)}</span></div><div class="resource-download"><span class="sub">已下载 ${resource.download_count} 次</span><button class="button secondary" data-download="${resource.id}">下载文件</button></div></div><p class="resource-card-summary">${esc(fields.scenario || '未填写适用场景')}</p><details class="resource-details"><summary>查看使用说明与核验证据</summary><div class="resource-detail-grid">${detail('成果类型', fields.type)}${detail('适用场景', fields.scenario)}${detail('使用前准备', fields.input)}${detail('使用结果', fields.output)}${detail('使用步骤', fields.steps)}${detail('使用限制与数据权限', fields.guardrails)}<div class="resource-detail resource-evidence"><strong>核验证据</strong>${evidenceView}</div></div></details></article>`;
     }).join('') : '<p class="empty">暂未有审核发布的成果。</p>';
     $('#resource-list').onclick = async (event) => {
       const id = event.target.dataset.download;
@@ -79,6 +84,11 @@
     }
   }
   document.querySelectorAll('[data-partner-view]').forEach((tab) => tab.addEventListener('click', () => showPartnerView(tab.dataset.partnerView)));
+  document.querySelectorAll('.form-accordion').forEach((block) => block.addEventListener('toggle', syncSubmissionSteps));
+  $('#self-review-form').addEventListener('invalid', (event) => {
+    const block = event.target.closest('.form-accordion');
+    if (block) { block.open = true; syncSubmissionSteps(); }
+  }, true);
   $('#submission-list').addEventListener('click', (event) => {
     const id = event.target.dataset.resubmit;
     if (!id) return;
