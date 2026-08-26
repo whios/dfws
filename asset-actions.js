@@ -25,7 +25,7 @@
         const actions = row.querySelector('.asset-actions');
         if (!actions) return;
         actions.innerHTML = window.DfwsCloud?.staff?.()
-          ? `<button class="action-link danger-action" data-unpublish-skill="${asset.resourceId}">下架成果</button>`
+          ? `<button class="action-link" data-unpublish-skill="${asset.resourceId}">下架</button><button class="action-link danger-action" data-delete-skill="${asset.resourceId}">删除</button>`
           : '<span class="sub">成果自动入账</span>';
       });
     };
@@ -36,6 +36,27 @@
     decorateLinkedAssets();
 
     view.addEventListener('click', async (event) => {
+      const deleteResourceId = event.target.dataset.deleteSkill;
+      if (deleteResourceId) {
+        const asset = state.assets.find((item) => item.resourceId === deleteResourceId);
+        if (!asset || !confirm(`确认永久删除“${asset.name}”吗？关联成果、资产台账、下载明细和文件都会删除，无法恢复。`)) return;
+        try {
+          event.target.disabled = true;
+          event.target.textContent = '正在删除...';
+          const result = await window.DfwsCloud.deleteSkillResource(deleteResourceId);
+          const remote = await window.DfwsCloud.refreshState();
+          if (!remote) throw new Error('删除已提交，但未能刷新云端台账。');
+          state = { ...state, ...remote };
+          localStorage.setItem(key, JSON.stringify(state));
+          dashboard(); window.assets(); verify(); report();
+          toast(result.fileCleanupPending ? '成果与资产已删除；文件清理将由管理员复核' : '成果与关联资产已删除');
+        } catch (error) {
+          event.target.disabled = false;
+          event.target.textContent = '删除';
+          toast(error.message || '删除失败，请稍后重试');
+        }
+        return;
+      }
       const resourceId = event.target.dataset.unpublishSkill;
       if (!resourceId) return;
       const asset = state.assets.find((item) => item.resourceId === resourceId);

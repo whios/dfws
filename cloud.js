@@ -313,6 +313,18 @@
       return { email: 'failed', message: mailError.message || '审核邮件发送失败' };
     }
   }
+  async function deleteSkillResource(id) {
+    if (!staff()) throw new Error('当前账号没有删除成果的权限。');
+    const { data: { session } } = await client.auth.getSession();
+    const response = await fetch('/api/staff/delete-skill-resource', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+      body: JSON.stringify({ resourceId: id })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || '成果删除失败');
+    return body;
+  }
   async function editSkill(id, values) {
     if (!staff()) throw new Error('当前账号没有编辑成果的权限。');
     const { error } = await client.from('skill_resources').update({ title: values.title, description: values.description, updated_at: new Date().toISOString() }).eq('id', id);
@@ -320,5 +332,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, reviewSkill, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly };
 })();
