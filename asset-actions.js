@@ -6,9 +6,15 @@
   window.assets = function assetsWithPublishedSkillActions() {
     baseAssetsView();
     const view = document.querySelector('#assets');
+    const formGrid = document.querySelector('#asset-form .form-grid');
+    if (formGrid && !formGrid.querySelector('[name="status"]')) {
+      const evidenceField = formGrid.querySelector('[name="evidence"]')?.closest('label');
+      evidenceField?.insertAdjacentHTML('beforebegin', '<label>核验状态<select name="status"><option>待核验</option><option>通过</option><option>需优化</option><option>补充证据</option><option>停用</option><option>已下架</option></select></label>');
+    }
     const decorateLinkedAssets = () => {
       const body = document.querySelector('#asset-body');
       if (!body) return;
+      body.querySelectorAll('[data-edit]').forEach((button) => { button.textContent = '核验 / 编辑'; });
       const brand = document.querySelector('#brand-filter').value;
       const type = document.querySelector('#type-filter').value;
       const level = document.querySelector('#level-filter').value;
@@ -25,7 +31,7 @@
         const actions = row.querySelector('.asset-actions');
         if (!actions) return;
         actions.innerHTML = window.DfwsCloud?.staff?.()
-          ? `<button class="action-link" data-unpublish-skill="${asset.resourceId}">下架</button><button class="action-link danger-action" data-delete-skill="${asset.resourceId}">删除</button>`
+          ? `<button class="action-link" data-edit="${asset.id}">核验 / 编辑</button><button class="action-link" data-unpublish-skill="${asset.resourceId}">下架</button><button class="action-link danger-action" data-delete-skill="${asset.resourceId}">删除</button>`
           : '<span class="sub">成果自动入账</span>';
       });
     };
@@ -35,6 +41,8 @@
     if (body) observer.observe(body, { childList: true });
     decorateLinkedAssets();
 
+    if (view.dataset.publishedAssetActionsBound === 'true') return;
+    view.dataset.publishedAssetActionsBound = 'true';
     view.addEventListener('click', async (event) => {
       const deleteResourceId = event.target.dataset.deleteSkill;
       if (deleteResourceId) {
