@@ -6,6 +6,7 @@ function skills() {
   const statusName = new Map(statusOptions);
   let resources = [];
   let partners = [];
+  let downloads = [];
   let editingSkillId = null;
   const formatSize = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`;
   const extract = (description, label) => {
@@ -13,7 +14,23 @@ function skills() {
     return matched?.[1]?.trim() || '';
   };
   const detail = (label, value) => `<div class="skill-detail"><strong>${label}</strong><span>${esc(value || '未填写')}</span></div>`;
-  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">所有新成果在此提交；发布后自动写入资产台账。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill">管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
+  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">所有新成果在此提交；发布后自动写入资产台账。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill">管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><article class="card reuse-ranking"><div class="section-head"><div><h2>成果复用榜</h2><p>按去重下载人数排序，下载仅代表获取文件，不等同于实际使用。</p></div><label class="sub">排行口径 <select id="reuse-ranking-mode"><option value="month">近 30 天最受复用</option><option value="total">累计下载最多</option><option value="recent">最近有新下载</option></select></label></div><div class="table-wrap"><table class="table"><thead><tr><th>排名</th><th>成果</th><th>归属伙伴</th><th>下载人数</th><th>下载次数</th><th>最近下载</th></tr></thead><tbody id="reuse-ranking-body"><tr><td colspan="6" class="empty">正在统计复用数据...</td></tr></tbody></table></div></article><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
+  const renderRanking = () => {
+    const brand = $('#skill-brand').value;
+    const mode = $('#reuse-ranking-mode').value;
+    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const byId = new Map(resources.filter((resource) => resource.status === 'published' && (!brand || resource.partners?.brand === brand)).map((resource) => [resource.id, { resource, events: [] }]));
+    downloads.forEach((item) => {
+      const row = byId.get(item.resource_id);
+      if (row) row.events.push(item);
+    });
+    const rows = [...byId.values()].map(({ resource, events }) => {
+      const scoped = mode === 'month' ? events.filter((item) => new Date(item.downloaded_at).getTime() >= since) : events;
+      const latest = events.map((item) => new Date(item.downloaded_at).getTime()).filter(Number.isFinite).sort((a, b) => b - a)[0] || 0;
+      return { resource, unique: new Set(scoped.map((item) => item.downloaded_by)).size, count: scoped.length, latest };
+    }).filter((item) => mode === 'recent' ? item.latest > 0 : item.count > 0).sort((a, b) => mode === 'recent' ? b.latest - a.latest : b.unique - a.unique || b.count - a.count || b.latest - a.latest).slice(0, 5);
+    $('#reuse-ranking-body').innerHTML = rows.map((item, index) => `<tr><td><span class="ranking-number">${index + 1}</span></td><td><strong>${esc(item.resource.title)}</strong></td><td>${esc(item.resource.partners?.owner_name || '未关联')}<br><span class="sub">${esc(item.resource.partners?.brand || '未填写品牌')}</span></td><td>${item.unique} 人</td><td>${item.count} 次</td><td>${item.latest ? new Date(item.latest).toLocaleString('zh-CN', { hour12: false }) : '暂无'}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">当前口径下暂无下载记录</td></tr>';
+  };
   const render = () => {
     const query = $('#skill-search').value.trim().toLowerCase();
     const brand = $('#skill-brand').value;
@@ -38,6 +55,7 @@ function skills() {
       const badgeClass = resource.status === 'published' ? 'v3' : resource.status === 'rejected' ? 'high' : resource.status === 'archived' ? 'v0' : 'v1';
       return `<article class="card skill-library-card"><div class="skill-card-top"><span class="badge ${badgeClass}">${esc(statusName.get(resource.status) || '待审核')}</span><span class="sub">${esc(type)}</span></div><div><h3>${esc(resource.title)}</h3><p>${esc(scenario).slice(0, 150)}${scenario.length > 150 ? '...' : ''}</p></div>${evidenceUrl ? `<a class="action-link skill-evidence-link" href="${esc(evidenceUrl)}" target="_blank" rel="noopener">打开核验证据</a>` : ''}<details class="skill-card-details"><summary>查看完整填写信息</summary><div class="skill-detail-grid">${detail('适用场景', scenario)}${detail('使用步骤', steps)}${detail('使用前准备', input)}${detail('使用结果', output)}${detail('使用限制与数据权限', guardrails)}${detail('核验证据', evidence)}</div></details><div class="skill-card-meta"><span><strong>${esc(partner.owner_name || '未关联伙伴')}</strong> · ${esc(partner.brand || '未填写品牌')} · ${esc(partner.department || '未填写部门')}</span><span>${esc(resource.file_name || '未上传文件')} · ${formatSize(resource.size_bytes || 0)} · 已下载 ${resource.download_count || 0} 次</span></div><textarea class="skill-card-note" data-skill-note="${resource.id}" placeholder="审核备注，伙伴被退回后可见">${esc(resource.review_note || '')}</textarea><div class="skill-card-actions"><select data-skill-status="${resource.id}">${statusOptions.map(([value, label]) => `<option value="${value}" ${resource.status === value ? 'selected' : ''}>${label}</option>`).join('')}</select><span style="flex:1"></span><button class="button secondary" data-download-skill="${resource.id}">下载文件</button><button class="button secondary" data-edit-skill="${resource.id}">编辑</button><button class="button primary" data-save-skill="${resource.id}">保存</button><button class="button secondary danger-action" data-delete-skill="${resource.id}">删除成果</button></div></article>`;
     }).join('') || '<div class="empty">没有符合筛选条件的成果</div>';
+    renderRanking();
   };
   const openEdit = (resource) => {
     editingSkillId = resource.id;
@@ -51,12 +69,13 @@ function skills() {
       const selectedBrand = $('#skill-brand').value;
       resources = data.resources;
       partners = personnel.partners || [];
+      downloads = data.downloads || [];
       const brands = [...new Set(resources.map((resource) => resource.partners?.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
       $('#skill-brand').innerHTML = `<option value="">全部品牌</option>${brands.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}`;
       $('#skill-brand').value = brands.includes(selectedBrand) ? selectedBrand : '';
       render();
       const titles = new Map(resources.map((resource) => [resource.id, resource.title]));
-      $('#download-body').innerHTML = data.downloads.map((item) => `<tr><td>${esc(titles.get(item.resource_id) || '已删除成果')}</td><td>${esc(item.downloader)}</td><td>${new Date(item.downloaded_at).toLocaleString('zh-CN', { hour12: false })}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">暂未有下载记录</td></tr>';
+      $('#download-body').innerHTML = downloads.map((item) => `<tr><td>${esc(titles.get(item.resource_id) || '已删除成果')}</td><td>${esc(item.downloader)}</td><td>${new Date(item.downloaded_at).toLocaleString('zh-CN', { hour12: false })}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">暂未有下载记录</td></tr>';
     } catch (error) {
       $('#skill-filter-count').textContent = '成果加载失败';
       $('#skill-card-grid').innerHTML = `<div class="empty">${esc(error.message || '成果加载失败')}</div>`;
@@ -80,6 +99,7 @@ function skills() {
     $('#admin-skill-dialog').showModal();
   };
   ['skill-search', 'skill-brand', 'skill-review-type'].forEach((id) => $('#'+id).addEventListener(id === 'skill-search' ? 'input' : 'change', render));
+  $('#reuse-ranking-mode').addEventListener('change', renderRanking);
   $('#skill-card-grid').onclick = async (event) => {
     const id = event.target.dataset.downloadSkill || event.target.dataset.editSkill || event.target.dataset.saveSkill || event.target.dataset.deleteSkill;
     if (!id) return;
