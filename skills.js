@@ -5,6 +5,7 @@ function skills() {
   const statusOptions = [['pending', '待审核'], ['published', '已发布并入账'], ['rejected', '退回修改'], ['archived', '已下架']];
   const statusName = new Map(statusOptions);
   let resources = [];
+  let partners = [];
   let editingSkillId = null;
   const formatSize = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`;
   const extract = (description, label) => {
@@ -12,7 +13,7 @@ function skills() {
     return matched?.[1]?.trim() || '';
   };
   const detail = (label, value) => `<div class="skill-detail"><strong>${label}</strong><span>${esc(value || '未填写')}</span></div>`;
-  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">发布即自动写入资产台账；点击下载会直接保存原文件。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
+  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">所有新成果在此提交；发布后自动写入资产台账。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill">管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
   const render = () => {
     const query = $('#skill-search').value.trim().toLowerCase();
     const brand = $('#skill-brand').value;
@@ -46,9 +47,10 @@ function skills() {
   };
   const load = async () => {
     try {
-      const data = await window.DfwsCloud.listSkillResources(true);
+      const [data, personnel] = await Promise.all([window.DfwsCloud.listSkillResources(true), window.DfwsCloud.listProfiles()]);
       const selectedBrand = $('#skill-brand').value;
       resources = data.resources;
+      partners = personnel.partners || [];
       const brands = [...new Set(resources.map((resource) => resource.partners?.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
       $('#skill-brand').innerHTML = `<option value="">全部品牌</option>${brands.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}`;
       $('#skill-brand').value = brands.includes(selectedBrand) ? selectedBrand : '';
@@ -59,6 +61,23 @@ function skills() {
       $('#skill-filter-count').textContent = '成果加载失败';
       $('#skill-card-grid').innerHTML = `<div class="empty">${esc(error.message || '成果加载失败')}</div>`;
     }
+  };
+  const normalizeEvidence = (value) => String(value || '').trim().match(/https?:\/\/[^\s<>"'）】]+/i)?.[0]?.replace(/[，。；、]+$/u, '') || String(value || '').trim();
+  const buildAdminDescription = (evidence) => [
+    `成果类型：${$('#admin-skill-type').value}`,
+    `适用场景：${$('#admin-skill-scenario').value.trim()}`,
+    `使用步骤：${$('#admin-skill-steps').value.trim()}`,
+    `输入要求与示例：${$('#admin-skill-input').value.trim()}`,
+    `预期输出与示例：${$('#admin-skill-output').value.trim()}`,
+    $('#admin-skill-guardrails').value.trim() ? `使用限制与数据权限：${$('#admin-skill-guardrails').value.trim()}` : '',
+    `核验证据：${evidence}`
+  ].filter(Boolean).join('\n\n');
+  const openAdminSubmit = () => {
+    const select = $('#admin-skill-partner');
+    select.innerHTML = `<option value="">请选择归属伙伴</option>${partners.map((partner) => `<option value="${partner.id}">${esc(partner.owner_name)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`).join('')}`;
+    $('#admin-skill-form').reset();
+    $('#admin-skill-message').textContent = '';
+    $('#admin-skill-dialog').showModal();
   };
   ['skill-search', 'skill-brand', 'skill-review-type'].forEach((id) => $('#'+id).addEventListener(id === 'skill-search' ? 'input' : 'change', render));
   $('#skill-card-grid').onclick = async (event) => {
@@ -104,6 +123,31 @@ function skills() {
     try { submit.disabled = true; await window.DfwsCloud.editSkill(editingSkillId, { title: $('#skill-edit-title').value.trim(), description: $('#skill-edit-description').value.trim() }); $('#skill-edit-dialog').close(); toast('成果内容已修改'); await load(); }
     catch (error) { toast(error.message || '修改失败'); }
     finally { submit.disabled = false; }
+  };
+  $('#add-admin-skill').onclick = openAdminSubmit;
+  document.querySelectorAll('[data-close-admin-skill]').forEach((button) => { button.onclick = () => $('#admin-skill-dialog').close(); });
+  $('#admin-skill-evidence').onblur = (event) => { event.target.value = normalizeEvidence(event.target.value); };
+  $('#admin-skill-form').onsubmit = async (event) => {
+    event.preventDefault();
+    const partner = partners.find((item) => item.id === $('#admin-skill-partner').value);
+    const file = $('#admin-skill-file').files[0];
+    const submit = $('#admin-skill-submit');
+    if (!partner || !file) { $('#admin-skill-message').textContent = '请选择归属伙伴和成果文件。'; return; }
+    const evidence = normalizeEvidence($('#admin-skill-evidence').value);
+    $('#admin-skill-evidence').value = evidence;
+    try {
+      submit.disabled = true;
+      submit.textContent = '正在上传...';
+      await window.DfwsCloud.uploadSkill(partner, { title: $('#admin-skill-title').value.trim(), description: buildAdminDescription(evidence) }, file);
+      $('#admin-skill-dialog').close();
+      toast('成果已提交，等待审核发布后自动入账');
+      await load();
+    } catch (error) {
+      $('#admin-skill-message').textContent = error.message || '成果上传失败，请稍后重试。';
+    } finally {
+      submit.disabled = false;
+      submit.textContent = '提交成果审核';
+    }
   };
   $('#refresh-skills').onclick = load;
   load();
