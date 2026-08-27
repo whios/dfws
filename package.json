@@ -1,0 +1,9 @@
+{
+  "name": "dfws",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check api/staff/delete-skill-resource.js && node --check api/staff/invite-member.js && node --check api/staff/send-skill-review-email.js"
+  }
+}
