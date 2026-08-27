@@ -171,6 +171,12 @@
     const title = $('#skill-title').value.trim();
     if (!partner) { $('#form-message').textContent = '当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。'; return; }
     if (!file) { $('#form-message').textContent = '请选择要提交的 Skill 文件。'; return; }
+    if (!$('#skill-steps').value.trim() && !$('#skill-guide-in-evidence').checked) {
+      $('#form-message').textContent = '请填写使用步骤，或确认附件 / WorkBuddy 对话已包含完整操作步骤。';
+      document.querySelector('.form-accordion:last-of-type').open = true;
+      syncSubmissionSteps();
+      return;
+    }
     const evidence = normalizeEvidence($('#evidence-url').value);
     $('#evidence-url').value = evidence;
     const submit = event.currentTarget.querySelector('[type="submit"]');
@@ -188,6 +194,7 @@
       $('#skill-output').value = '';
       $('#skill-guardrails').value = '';
       $('#evidence-url').value = '';
+      $('#skill-guide-in-evidence').checked = false;
       $('#skill-tested').checked = false;
       $('#skill-file').value = '';
       $('#skill-file-status').textContent = '成果已提交，等待审核';

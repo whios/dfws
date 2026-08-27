@@ -133,6 +133,10 @@ function skills() {
     const file = $('#admin-skill-file').files[0];
     const submit = $('#admin-skill-submit');
     if (!partner || !file) { $('#admin-skill-message').textContent = '请选择归属伙伴和成果文件。'; return; }
+    if (!$('#admin-skill-steps').value.trim() && !$('#admin-skill-guide-in-evidence').checked) {
+      $('#admin-skill-message').textContent = '请填写使用步骤，或确认附件 / WorkBuddy 对话已包含完整操作步骤。';
+      return;
+    }
     const evidence = normalizeEvidence($('#admin-skill-evidence').value);
     $('#admin-skill-evidence').value = evidence;
     try {
