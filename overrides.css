@@ -120,6 +120,11 @@ a.nav-item { text-decoration: none; }
 .skill-detail { display: grid; gap: 3px; }
 .skill-detail strong { color: var(--muted); font-size: 11px; }
 .skill-detail span { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-line; }
+.admin-skill-sections { display: grid; gap: 10px; }
+#admin-skill-dialog .form-grid { margin: 0; }
+#admin-skill-dialog .check-field { align-items: center; cursor: pointer; display: flex; font-weight: 500; gap: 8px; line-height: 1.5; }
+#admin-skill-dialog .check-field input { flex: 0 0 auto; min-height: auto; width: auto; }
+#admin-skill-dialog .check-field span { display: inline; }
 @media (max-width: 600px) { .skill-library-summary { align-items: flex-start; flex-direction: column; gap: 4px; }.skill-card-grid { grid-template-columns: 1fr; }.skill-card-actions { align-items: stretch; }.skill-card-actions .button { flex: 1; } }
 @media (max-width: 960px) { .permission-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .permission-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }.permission-kpi { min-height: 90px; padding: 12px; }.permission-kpi strong { font-size: 23px; }.partner-picker-tools input { min-width: 100%; }.partner-picker-item { align-items: flex-start; flex-direction: column; gap: 3px; }.partner-picker-item span { padding-left: 8px; } }

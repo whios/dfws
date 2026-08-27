@@ -127,6 +127,10 @@ function skills() {
   $('#add-admin-skill').onclick = openAdminSubmit;
   document.querySelectorAll('[data-close-admin-skill]').forEach((button) => { button.onclick = () => $('#admin-skill-dialog').close(); });
   $('#admin-skill-evidence').onblur = (event) => { event.target.value = normalizeEvidence(event.target.value); };
+  $('#admin-skill-form').addEventListener('invalid', (event) => {
+    const block = event.target.closest('.form-accordion');
+    if (block) block.open = true;
+  }, true);
   $('#admin-skill-form').onsubmit = async (event) => {
     event.preventDefault();
     const partner = partners.find((item) => item.id === $('#admin-skill-partner').value);
