@@ -28,6 +28,17 @@
     const openIndex = blocks.findIndex((block) => block.open);
     document.querySelectorAll('.submission-steps span').forEach((step, index) => step.classList.toggle('active', index === (openIndex < 0 ? 0 : openIndex)));
   }
+  function showSubmissionError(message, field) {
+    const block = field?.closest('.form-accordion');
+    if (block) {
+      block.open = true;
+      syncSubmissionSteps();
+      requestAnimationFrame(() => field.focus({ preventScroll: true }));
+      block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    $('#form-message').textContent = message;
+    setStatus('请补充提交信息');
+  }
   function renderSubmissions(data) {
     const profile = window.DfwsCloud.profile;
     const ownResources = data.resources.filter((resource) => resource.uploaded_by === profile?.id);
@@ -169,12 +180,19 @@
     const partner = currentPartner();
     const file = $('#skill-file').files[0];
     const title = $('#skill-title').value.trim();
-    if (!partner) { $('#form-message').textContent = '当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。'; return; }
-    if (!file) { $('#form-message').textContent = '请选择要提交的 Skill 文件。'; return; }
-    if (!$('#skill-steps').value.trim() && !$('#skill-guide-in-evidence').checked) {
-      $('#form-message').textContent = '请填写使用步骤，或确认附件 / WorkBuddy 对话已包含完整操作步骤。';
-      document.querySelector('.form-accordion:last-of-type').open = true;
-      syncSubmissionSteps();
+    const scenario = $('#skill-scenario');
+    const evidenceInput = $('#evidence-url');
+    const tested = $('#skill-tested');
+    const steps = $('#skill-steps');
+    const guideInEvidence = $('#skill-guide-in-evidence');
+    if (!partner) { showSubmissionError('当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。'); return; }
+    if (!title) { showSubmissionError('请填写成果名称。', $('#skill-title')); return; }
+    if (!scenario.value.trim()) { showSubmissionError('请填写适用场景，说明成果解决什么问题。', scenario); return; }
+    if (!evidenceInput.value.trim()) { showSubmissionError('请粘贴 WorkBuddy 对话的详细操作步骤链接。', evidenceInput); return; }
+    if (!file) { showSubmissionError('请选择要提交的 Skill 文件。', $('#skill-file')); return; }
+    if (!tested.checked) { showSubmissionError('请确认已实际试用，且内容不含不应共享的数据。', tested); return; }
+    if (!steps.value.trim() && !guideInEvidence.checked) {
+      showSubmissionError('请填写使用步骤，或勾选“附件或 WorkBuddy 对话已包含完整操作步骤”。', guideInEvidence);
       return;
     }
     const evidence = normalizeEvidence($('#evidence-url').value);
