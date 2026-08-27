@@ -35,7 +35,7 @@ function skills() {
       const evidenceUrl = String(evidence).match(/https?:\/\/[^\s<>"'）】]+/i)?.[0] || '';
       const partner = resource.partners || {};
       const badgeClass = resource.status === 'published' ? 'v3' : resource.status === 'rejected' ? 'high' : resource.status === 'archived' ? 'v0' : 'v1';
-      return `<article class="card skill-library-card"><div class="skill-card-top"><span class="badge ${badgeClass}">${esc(statusName.get(resource.status) || '待审核')}</span><span class="sub">${esc(type)}</span></div><div><h3>${esc(resource.title)}</h3><p>${esc(scenario).slice(0, 150)}${scenario.length > 150 ? '...' : ''}</p></div>${evidenceUrl ? `<a class="action-link skill-evidence-link" href="${esc(evidenceUrl)}" target="_blank" rel="noopener">打开核验证据</a>` : ''}<details class="skill-card-details"><summary>查看完整填写信息</summary><div class="skill-detail-grid">${detail('适用场景', scenario)}${detail('使用步骤', steps)}${detail('使用前准备', input)}${detail('使用结果', output)}${detail('使用限制与数据权限', guardrails)}${detail('核验证据', evidence)}</div></details><div class="skill-card-meta"><span><strong>${esc(partner.owner_name || '未关联伙伴')}</strong> · ${esc(partner.brand || '未填写品牌')} · ${esc(partner.department || '未填写部门')}</span><span>${esc(resource.file_name || '未上传文件')} · ${formatSize(resource.size_bytes || 0)} · 已下载 ${resource.download_count || 0} 次</span></div><textarea class="skill-card-note" data-skill-note="${resource.id}" placeholder="审核备注，伙伴被退回后可见">${esc(resource.review_note || '')}</textarea><div class="skill-card-actions"><select data-skill-status="${resource.id}">${statusOptions.map(([value, label]) => `<option value="${value}" ${resource.status === value ? 'selected' : ''}>${label}</option>`).join('')}</select><span style="flex:1"></span><button class="button secondary" data-download-skill="${resource.id}">下载文件</button><button class="button secondary" data-edit-skill="${resource.id}">编辑</button><button class="button primary" data-save-skill="${resource.id}">保存</button></div></article>`;
+      return `<article class="card skill-library-card"><div class="skill-card-top"><span class="badge ${badgeClass}">${esc(statusName.get(resource.status) || '待审核')}</span><span class="sub">${esc(type)}</span></div><div><h3>${esc(resource.title)}</h3><p>${esc(scenario).slice(0, 150)}${scenario.length > 150 ? '...' : ''}</p></div>${evidenceUrl ? `<a class="action-link skill-evidence-link" href="${esc(evidenceUrl)}" target="_blank" rel="noopener">打开核验证据</a>` : ''}<details class="skill-card-details"><summary>查看完整填写信息</summary><div class="skill-detail-grid">${detail('适用场景', scenario)}${detail('使用步骤', steps)}${detail('使用前准备', input)}${detail('使用结果', output)}${detail('使用限制与数据权限', guardrails)}${detail('核验证据', evidence)}</div></details><div class="skill-card-meta"><span><strong>${esc(partner.owner_name || '未关联伙伴')}</strong> · ${esc(partner.brand || '未填写品牌')} · ${esc(partner.department || '未填写部门')}</span><span>${esc(resource.file_name || '未上传文件')} · ${formatSize(resource.size_bytes || 0)} · 已下载 ${resource.download_count || 0} 次</span></div><textarea class="skill-card-note" data-skill-note="${resource.id}" placeholder="审核备注，伙伴被退回后可见">${esc(resource.review_note || '')}</textarea><div class="skill-card-actions"><select data-skill-status="${resource.id}">${statusOptions.map(([value, label]) => `<option value="${value}" ${resource.status === value ? 'selected' : ''}>${label}</option>`).join('')}</select><span style="flex:1"></span><button class="button secondary" data-download-skill="${resource.id}">下载文件</button><button class="button secondary" data-edit-skill="${resource.id}">编辑</button><button class="button primary" data-save-skill="${resource.id}">保存</button><button class="button secondary danger-action" data-delete-skill="${resource.id}">删除成果</button></div></article>`;
     }).join('') || '<div class="empty">没有符合筛选条件的成果</div>';
   };
   const openEdit = (resource) => {
@@ -62,11 +62,32 @@ function skills() {
   };
   ['skill-search', 'skill-brand', 'skill-review-type'].forEach((id) => $('#'+id).addEventListener(id === 'skill-search' ? 'input' : 'change', render));
   $('#skill-card-grid').onclick = async (event) => {
-    const id = event.target.dataset.downloadSkill || event.target.dataset.editSkill || event.target.dataset.saveSkill;
+    const id = event.target.dataset.downloadSkill || event.target.dataset.editSkill || event.target.dataset.saveSkill || event.target.dataset.deleteSkill;
     if (!id) return;
     const resource = resources.find((item) => item.id === id);
     if (!resource) return;
     if (event.target.dataset.editSkill) { openEdit(resource); return; }
+    if (event.target.dataset.deleteSkill) {
+      if (!confirm(`确认永久删除“${resource.title || '该成果'}”吗？关联资产台账、下载明细和文件都会删除，无法恢复。`)) return;
+      try {
+        event.target.disabled = true;
+        event.target.textContent = '正在删除...';
+        const result = await window.DfwsCloud.deleteSkillResource(id);
+        const remote = await window.DfwsCloud.refreshState();
+        if (remote) {
+          state = { ...state, ...remote };
+          localStorage.setItem(key, JSON.stringify(state));
+          dashboard();
+        }
+        toast(result.fileCleanupPending ? '成果与关联资产已删除；文件清理将由管理员复核' : '成果与关联资产已删除');
+        await load();
+      } catch (error) {
+        toast(error.message || '删除失败，请稍后重试');
+      } finally {
+        event.target.disabled = false;
+      }
+      return;
+    }
     try {
       event.target.disabled = true;
       if (event.target.dataset.downloadSkill) { event.target.textContent = '准备下载...'; await window.DfwsCloud.downloadSkill(resource); toast('文件已开始下载'); await load(); return; }
