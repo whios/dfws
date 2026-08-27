@@ -1,0 +1,11 @@
+dfws.wendywang.club {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+}
+
+partner.wendywang.club {
+	encode zstd gzip
+	@root path /
+	redir @root /self-review.html 302
+	reverse_proxy 127.0.0.1:3000
+}
