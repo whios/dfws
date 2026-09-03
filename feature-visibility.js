@@ -12,7 +12,16 @@
       event.stopImmediatePropagation();
     }
   }, true);
-  const hideRiskDrill = () => document.querySelector('[data-drill="high"]')?.remove();
-  new MutationObserver(hideRiskDrill).observe(document.querySelector('#dashboard'), { childList: true, subtree: true });
-  hideRiskDrill();
+  const hideRiskContent = () => {
+    document.querySelector('[data-drill="high"]')?.remove();
+    document.querySelectorAll('#dashboard .section-head').forEach((head) => {
+      if (head.querySelector('h2')?.textContent.trim() === '待整改') {
+        const card = head.closest('article');
+        card?.parentElement?.classList.add('dashboard-single-column');
+        card?.remove();
+      }
+    });
+  };
+  new MutationObserver(hideRiskContent).observe(document.querySelector('#dashboard'), { childList: true, subtree: true });
+  hideRiskContent();
 })();

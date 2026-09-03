@@ -22,6 +22,10 @@ function storagePath(path) {
   return String(path || '').split('/').map(encodeURIComponent).join('/');
 }
 
+function descriptionValue(description, label) {
+  return String(description || '').match(new RegExp(`(?:^|\\n\\n)${label}：([\\s\\S]*?)(?=\\n\\n[^：]+：|$)`))?.[1]?.trim() || '';
+}
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') return reply(response, 405, { error: '仅支持 POST 请求' });
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.SUPABASE_PUBLISHABLE_KEY) return reply(response, 503, { error: '成果删除服务尚未完成安全配置。' });
@@ -34,7 +38,7 @@ export default async function handler(request, response) {
 
     const { resourceId } = request.body || {};
     if (!uuidPattern.test(resourceId || '')) return reply(response, 400, { error: '成果标识不合法。' });
-    const resources = await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}&select=id,file_path`, { headers: serviceHeaders() });
+    const resources = await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}&select=id,file_path,description`, { headers: serviceHeaders() });
     const resource = resources?.[0];
     if (!resource) return reply(response, 404, { error: '成果不存在或已被删除。' });
 
@@ -43,9 +47,10 @@ export default async function handler(request, response) {
     await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}`, { method: 'DELETE', headers: { ...serviceHeaders(), Prefer: 'return=representation' } });
 
     let fileCleanupPending = false;
-    if (resource.file_path) {
+    const paths = [resource.file_path, descriptionValue(resource.description, '成果展示附件路径')].filter(Boolean);
+    if (paths.length) {
       try {
-        await supabaseFetch(`/storage/v1/object/skill-files/${storagePath(resource.file_path)}`, { method: 'DELETE', headers: serviceHeaders() });
+        await Promise.all(paths.map((path) => supabaseFetch(`/storage/v1/object/skill-files/${storagePath(path)}`, { method: 'DELETE', headers: serviceHeaders() })));
       } catch {
         fileCleanupPending = true;
       }
