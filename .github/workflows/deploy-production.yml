@@ -1,0 +1,49 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: dfws-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Tencent Cloud
+    runs-on: [self-hosted, Linux, X64, dfws-production]
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Validate application files
+        run: |
+          node --check server.mjs
+          node --check api/staff/delete-skill-resource.js
+          node --check api/staff/invite-member.js
+          node --check api/staff/send-skill-review-email.js
+
+      - name: Synchronize application files
+        run: |
+          sudo -n install -d -o ubuntu -g ubuntu /opt/dfws
+          sudo -n rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.vercel/' \
+            --exclude 'deploy/' \
+            --exclude 'migrations/' \
+            --exclude 'README.md' \
+            --exclude '伙伴端产品说明书.md' \
+            "$GITHUB_WORKSPACE/" /opt/dfws/
+
+      - name: Restart and verify service
+        run: |
+          sudo -n systemctl restart dfws
+          systemctl is-active --quiet dfws
+          curl --fail --retry 6 --retry-connrefused --retry-delay 1 --max-time 5 http://127.0.0.1:3000/_health
