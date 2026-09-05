@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Deploy to Tencent Cloud
-    runs-on: [self-hosted, Linux, X64, dfws-production]
+  build:
+    name: Validate release source
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -29,6 +29,34 @@ jobs:
           node --check api/staff/invite-member.js
           node --check api/staff/send-skill-review-email.js
 
+      - name: Package application files
+        uses: actions/upload-artifact@v4
+        with:
+          name: dfws-release
+          if-no-files-found: error
+          path: |
+            ./
+            !.git/**
+            !.github/**
+            !.vercel/**
+            !deploy/**
+            !migrations/**
+            !README.md
+            !伙伴端产品说明书.md
+
+  deploy:
+    name: Deploy to Tencent Cloud
+    needs: build
+    runs-on: [self-hosted, Linux, X64, dfws-production]
+    timeout-minutes: 10
+
+    steps:
+      - name: Download validated release
+        uses: actions/download-artifact@v4
+        with:
+          name: dfws-release
+          path: release
+
       - name: Synchronize application files
         run: |
           sudo -n install -d -o ubuntu -g ubuntu /opt/dfws
@@ -40,7 +68,7 @@ jobs:
             --exclude 'migrations/' \
             --exclude 'README.md' \
             --exclude '伙伴端产品说明书.md' \
-            "$GITHUB_WORKSPACE/" /opt/dfws/
+            "$GITHUB_WORKSPACE/release/" /opt/dfws/
 
       - name: Restart and verify service
         run: |
