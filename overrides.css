@@ -246,3 +246,6 @@ a.nav-item { text-decoration: none; }
 .password-toggle:hover, .password-toggle:focus-visible { color: var(--teal); outline: none; }
 .password-toggle:focus-visible { box-shadow: 0 0 0 2px #8fc8c1; border-radius: 4px; }
 .password-toggle svg { height: 18px; width: 18px; }
+.site-filing { color: var(--muted); font-size: 12px; padding: 28px 0 4px; text-align: center; }
+.site-filing a { color: inherit; text-decoration: none; }
+.site-filing a:hover { color: var(--teal); text-decoration: underline; }
