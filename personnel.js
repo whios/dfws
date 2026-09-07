@@ -54,7 +54,7 @@ function permissions() {
           const conflict = profile.partner_id && bindingCounts.get(profile.partner_id) > 1;
           const status = conflict ? '绑定冲突' : profile.partner_id ? '已绑定' : '待绑定';
           const partnerLabel = profile.partner ? `${profile.partner.owner_name} · ${profile.partner.brand} · ${profile.partner.department}` : '未绑定伙伴';
-          return `<tr><td><strong>${esc(profile.display_name || '未命名')}</strong><br><span class="sub">${esc(profile.email)}</span></td><td>${profile.partner ? `${esc(profile.partner.brand)}<br><span class="sub">${esc(profile.partner.department)}</span>` : '<span class="sub">未关联</span>'}</td><td><select data-role="${profile.id}">${roles.map(([value, label]) => `<option value="${value}" ${profile.role === value ? 'selected' : ''}>${label}</option>`).join('')}</select></td><td><input type="hidden" data-partner="${profile.id}" value="${esc(profile.partner_id || '')}" /><span class="partner-binding" data-partner-label="${profile.id}">${esc(partnerLabel)}</span><div class="partner-binding-actions"><button class="action-link" data-pick-partner="${profile.id}">选择伙伴</button>${profile.partner_id ? `<button class="action-link muted-action" data-clear-partner="${profile.id}">取消绑定</button>` : ''}</div></td><td><span class="badge ${conflict ? 'high' : profile.partner_id ? 'v3' : 'v0'}">${status}</span><br><span class="sub">${roleName.get(profile.role) || '未设置角色'}</span></td><td><button class="action-link" data-save-profile="${profile.id}">保存</button></td></tr>`;
+          return `<tr><td><strong>${esc(profile.display_name || '未命名')}</strong><br><span class="sub">${esc(profile.email)}</span></td><td>${profile.partner ? `${esc(profile.partner.brand)}<br><span class="sub">${esc(profile.partner.department)}</span>` : '<span class="sub">未关联</span>'}</td><td><select data-role="${profile.id}">${roles.map(([value, label]) => `<option value="${value}" ${profile.role === value ? 'selected' : ''}>${label}</option>`).join('')}</select></td><td><input type="hidden" data-partner="${profile.id}" value="${esc(profile.partner_id || '')}" /><span class="partner-binding" data-partner-label="${profile.id}">${esc(partnerLabel)}</span><div class="partner-binding-actions"><button class="action-link" data-pick-partner="${profile.id}">选择伙伴</button>${profile.partner_id ? `<button class="action-link muted-action" data-clear-partner="${profile.id}">取消绑定</button>` : ''}</div></td><td><span class="badge ${conflict ? 'high' : profile.partner_id ? 'v3' : 'v0'}">${status}</span><br><span class="sub">${roleName.get(profile.role) || '未设置角色'}</span></td><td><button class="action-link" data-save-profile="${profile.id}">保存</button><button class="action-link" data-send-password-setup="${profile.id}">重新发送设置密码邮件</button></td></tr>`;
         }).join('') || '<tr><td colspan="6" class="empty">未找到匹配账号</td></tr>';
       };
       const renderPicker = () => {
@@ -75,6 +75,15 @@ function permissions() {
         if (pickedPartner) { const partner = partnersById.get(pickedPartner); $(`[data-partner="${pickerProfileId}"]`).value = pickedPartner; $(`[data-partner-label="${pickerProfileId}"]`).textContent = `${partner.owner_name} · ${partner.brand} · ${partner.department}`; $('#partner-picker-dialog').close(); return; }
         const clearProfile = event.target.dataset.clearPartner;
         if (clearProfile) { $(`[data-partner="${clearProfile}"]`).value = ''; $(`[data-partner-label="${clearProfile}"]`).textContent = '未绑定伙伴'; return; }
+        const passwordSetupProfile = event.target.dataset.sendPasswordSetup;
+        if (passwordSetupProfile) {
+          const profile = data.profiles.find((item) => item.id === passwordSetupProfile);
+          if (!profile || !confirm(`确认向 ${profile.email} 重新发送设置密码邮件？`)) return;
+          try { event.target.disabled = true; event.target.textContent = '正在发送...'; const result = await window.DfwsCloud.sendPasswordSetupEmail(passwordSetupProfile); toast(result.message || '设置密码邮件已发送'); }
+          catch (error) { toast(error.message || '设置密码邮件发送失败'); }
+          finally { event.target.disabled = false; event.target.textContent = '重新发送设置密码邮件'; }
+          return;
+        }
         const saveProfile = event.target.dataset.saveProfile;
         if (!saveProfile) return;
         try { await window.DfwsCloud.updateProfile(saveProfile, { role: $(`[data-role="${saveProfile}"]`).value, partner_id: $(`[data-partner="${saveProfile}"]`).value || null }); toast('权限已更新，已同步云端数据'); await load(); } catch (error) { toast(error.message || '权限更新失败'); }
