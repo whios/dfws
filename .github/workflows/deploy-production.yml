@@ -27,6 +27,7 @@ jobs:
           node --check server.mjs
           node --check api/staff/delete-skill-resource.js
           node --check api/staff/invite-member.js
+          node --check api/staff/send-password-setup-email.js
           node --check api/staff/send-skill-review-email.js
 
       - name: Package application files
