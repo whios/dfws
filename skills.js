@@ -56,7 +56,7 @@ function skills() {
     const status = $('#skill-review-type').value;
     const filtered = resources.filter((resource) => {
       const text = `${resource.title || ''}${resource.file_name || ''}${resource.description || ''}${resource.partners?.owner_name || ''}${resource.partners?.brand || ''}`.toLowerCase();
-      return (!query || text.includes(query)) && (!brand || resource.partners?.brand === brand) && (!status || resource.status === status);
+      return (!query || text.includes(query)) && (!brand || resource.partners?.brand === brand) && (!status || resource.status === status) && (!initialFilters.resourceId || resource.id === initialFilters.resourceId);
     });
     const published = resources.filter((resource) => resource.status === 'published').length;
     const evaluationsByResource = new Map(evaluationSummaries.map((item) => [item.resource_id, item]));

@@ -59,7 +59,7 @@
 
   async function loadState() {
     const [partnersRes, assetsRes, risksRes, reviewsRes, resourcesRes] = await Promise.all([
-      client.from('partners').select('*').order('brand').order('owner_name'), client.from('assets').select('*').order('created_at'),
+      client.from('partners').select('*').order('brand').order('owner_name'), client.from('assets').select('*, skill_resources(status)').order('created_at'),
       client.from('risks').select('*').order('due_date'), client.from('reviews').select('*'),
       client.from('skill_resources').select('id, partner_id, status, created_at, partners(owner_name, brand, department)').order('created_at', { ascending: false })
     ]);
@@ -69,7 +69,8 @@
     const partners = partnersRes.data.map((p) => ({ id: p.id, owner: p.owner_name, brand: p.brand, department: p.department }));
     const reviews = {};
     reviewsRes.data.forEach((r) => { const partner = partnersRes.data.find((p) => p.id === r.partner_id); if (partner) reviews[partner.owner_name] = { self: r.self_review, selfLevel: r.self_level, manager: r.manager_review, managerLevel: r.manager_level, officer: r.officer_review, officerLevel: r.officer_level }; });
-    return { partners, reviews, assets: assetsRes.data.map((a) => ({ id: a.id, resourceId: a.skill_resource_id || null, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.verification_level, status: a.verification_status, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: risksRes.data.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })), submissions: (resourcesRes.data || []).map((r) => ({ id: r.id, partnerId: r.partner_id, status: r.status, createdAt: r.created_at, owner: r.partners?.owner_name || '未关联伙伴', brand: r.partners?.brand || '未填写品牌', department: r.partners?.department || '未填写部门' })) };
+    const publicationStatus = (status) => ({ pending: '待审核', published: '已发布', rejected: '退回修改', archived: '已下架' })[status] || '待审核';
+    return { partners, reviews, assets: assetsRes.data.map((a) => ({ id: a.id, resourceId: a.skill_resource_id || null, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.verification_level, status: a.skill_resources?.status ? publicationStatus(a.skill_resources.status) : '补录资产', sourceStatus: a.skill_resources?.status || null, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: risksRes.data.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })), submissions: (resourcesRes.data || []).map((r) => ({ id: r.id, partnerId: r.partner_id, status: r.status, createdAt: r.created_at, owner: r.partners?.owner_name || '未关联伙伴', brand: r.partners?.brand || '未填写品牌', department: r.partners?.department || '未填写部门' })) };
   }
 
   async function writeState(state) {
