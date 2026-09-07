@@ -34,34 +34,34 @@
     </section>
     <main class="self-review-shell">
       <header class="self-review-header">
-        <button class="back-link" type="button" id="sign-out" data-sign-out-redirect="index.html">退出并进入管理端</button>
+        <button class="back-link" type="button" id="sign-out" data-sign-out-redirect="index.html">退出</button>
         <div class="brand"><span class="brand-mark">A</span><span>AI 成果管理</span></div>
         <span class="self-review-status" id="save-status">正在连接云端</span>
       </header>
       <section class="self-review-intro">
         <p class="eyebrow">伙伴端</p>
         <h1>AI 应用成果中心</h1>
-        <p>沉淀可复用的 Skill、智能体和工作流，帮助同伴更高效地完成业务任务。</p>
+        <p>沉淀可复用的 Skill、工作流和数字员工，帮助同伴更高效地完成业务任务。</p>
       </section>
       <nav class="partner-tabs" aria-label="伙伴端功能">
-        <button class="partner-tab active" type="button" data-partner-view="submit">提交成果</button>
-        <button class="partner-tab" type="button" data-partner-view="submissions">我的提交<span class="tab-count is-hidden" id="submission-returned-count">0</span></button>
+        <button class="partner-tab active" type="button" data-partner-view="library">成果库</button>
+        <button class="partner-tab" type="button" data-partner-view="submit">提交成果</button>
+        <button class="partner-tab" type="button" data-partner-view="submissions">提交反馈<span class="tab-count is-hidden" id="submission-returned-count">0</span></button>
         <button class="partner-tab" type="button" data-partner-view="notifications">通知<span class="tab-count is-hidden" id="notification-unread-count">0</span></button>
-        <button class="partner-tab" type="button" data-partner-view="library">成果库</button>
       </nav>
-      <form id="self-review-form" class="self-review-form partner-view active" data-partner-panel="submit" novalidate>
+      <form id="self-review-form" class="self-review-form partner-view" data-partner-panel="submit" novalidate>
         <section class="self-review-section">
           <div class="section-title"><h2>提交成果</h2><span>审核通过后可供同伴下载</span></div>
           <p class="self-review-tip">提交前请先在实际使用的 AI 工具中试用并调整内容，确认其他伙伴可以照着步骤独立完成。</p>
           <div class="submission-steps" aria-label="提交步骤"><span class="active">1 基础信息</span><span>2 应用效果</span><span>3 成果展示</span><span>4 证据与文件</span><span>5 补充说明</span></div>
-          <details class="form-block form-accordion" open>
+          <details class="form-block form-accordion">
             <summary><span><b>1</b>基础信息</span><small>名称、类型和适用场景</small></summary>
             <div class="form-block-content">
               <label>成果名称
                 <input id="skill-title" maxlength="120" required placeholder="例如：客户方案生成 Skill" />
               </label>
               <label>成果类型
-                <select id="skill-type" required><option>Skill</option><option>智能体</option><option>工作流</option><option>提示词模板</option><option>其他</option></select>
+                <select id="skill-type" required><option>Skill</option><option>工作流</option><option>数字员工</option></select>
               </label>
               <label>可见范围
                 <select id="skill-visibility" required><option value="all_partners">全体伙伴可见</option><option value="brand_only">仅限本品牌伙伴可见</option></select>
@@ -115,7 +115,7 @@
               <p class="field-hint" id="skill-showcase-file-status">未选择展示附件。支持方案 PPT、PDF、图片、视频等，单个文件不超过 200MB。</p>
             </div>
           </details>
-          <details class="form-block form-accordion">
+          <details class="form-block form-accordion" open>
             <summary><span><b>4</b>证据与附件</span><small>链接、文件与提交确认</small></summary>
             <div class="form-block-content">
               <label>AI 对话的详细操作步骤（链接）
@@ -152,15 +152,15 @@
         </footer>
       </form>
       <section class="my-submissions partner-view" data-partner-panel="submissions" aria-labelledby="my-submissions-title">
-        <div class="section-title"><div><p class="eyebrow">我的提交</p><h2 id="my-submissions-title">审核进度</h2></div><span id="submission-count" class="sub">加载中</span></div>
+        <div class="section-title"><div><p class="eyebrow">提交反馈</p><h2 id="my-submissions-title">审核进度</h2></div><span id="submission-count" class="sub">加载中</span></div>
         <p class="submission-intro">这里仅显示你本人提交的成果。被退回后，请按审核说明修改并重新提交。</p>
-        <div id="submission-list" class="submission-list"><p class="empty">正在加载我的提交。</p></div>
+        <div id="submission-list" class="submission-list"><p class="empty">正在加载提交反馈。</p></div>
       </section>
       <section class="notifications partner-view" data-partner-panel="notifications" aria-labelledby="notifications-title">
         <div class="section-title"><div><p class="eyebrow">通知</p><h2 id="notifications-title">审核提醒</h2></div><span id="notification-count" class="sub">加载中</span></div>
         <div id="notification-list" class="notification-list"><p class="empty">正在加载通知。</p></div>
       </section>
-      <section class="resource-library partner-view" data-partner-panel="library" aria-labelledby="resource-library-title">
+      <section class="resource-library partner-view active" data-partner-panel="library" aria-labelledby="resource-library-title">
         <div class="section-title"><div><p class="eyebrow">AI 成果库</p><h2 id="resource-library-title">已发布成果</h2></div><span id="resource-count" class="sub">加载中</span></div>
         <p class="library-intro">仅展示已发布且你有权限查看的成果。可直接打开操作步骤或下载文件，不展示审核过程和审核备注。</p>
         <div id="resource-library-controls" class="resource-library-controls" aria-label="成果库筛选"></div>
