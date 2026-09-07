@@ -71,8 +71,27 @@ jobs:
             --exclude '伙伴端产品说明书.md' \
             "$GITHUB_WORKSPACE/release/" /opt/dfws/
 
+      - name: Configure review email SMTP
+        env:
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          test -n "$SMTP_PASSWORD"
+          smtp_env=$(mktemp)
+          sudo -n cat /etc/dfws.env 2>/dev/null | grep -v -E '^SMTP_(HOST|PORT|SECURE|USER|FROM|PASSWORD)=' > "$smtp_env" || true
+          {
+            cat "$smtp_env"
+            printf '%s\n' 'SMTP_HOST=smtp.qiye.aliyun.com'
+            printf '%s\n' 'SMTP_PORT=465'
+            printf '%s\n' 'SMTP_SECURE=true'
+            printf '%s\n' 'SMTP_USER=skill@dfwsgroup.com'
+            printf '%s\n' 'SMTP_FROM=skill@dfwsgroup.com'
+            printf 'SMTP_PASSWORD=%s\n' "$SMTP_PASSWORD"
+          } | sudo -n tee /etc/dfws.env > /dev/null
+          sudo -n chmod 600 /etc/dfws.env
+
       - name: Restart and verify service
         run: |
           sudo -n systemctl restart dfws
           systemctl is-active --quiet dfws
           curl --fail --retry 6 --retry-connrefused --retry-delay 1 --max-time 5 http://127.0.0.1:3000/_health
+          timeout 10 bash -c '</dev/tcp/smtp.qiye.aliyun.com/465'
