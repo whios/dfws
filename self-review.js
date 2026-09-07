@@ -7,11 +7,88 @@
   let resourceData = { resources: [], downloads: [], ratings: [] };
   let evaluationCampaigns = [];
   let libraryFilters = { query: '', brand: '', type: '', sort: 'recent' };
+  let submissionDraftTimer = null;
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
   function currentPartner() { return activePartner; }
   function setStatus(text) { $('#save-status').textContent = text; }
+  function submissionDraftKey() {
+    const userId = window.DfwsCloud?.profile?.id;
+    return userId ? `dfws-skill-submission-draft:${userId}` : null;
+  }
+  function currentSubmissionDraft() {
+    return {
+      title: $('#skill-title').value,
+      type: $('#skill-type').value,
+      visibility: $('#skill-visibility').value,
+      scenario: $('#skill-scenario').value,
+      showcaseLinks: $('#skill-showcase-links').value,
+      showcaseNote: $('#skill-showcase-note').value,
+      effectTypes: [...document.querySelectorAll('input[name="skill-effect-type"]:checked')].map((input) => input.value),
+      effectOther: $('#skill-effect-other').value,
+      effectChange: $('#skill-effect-change').value,
+      effectEvidence: $('#skill-effect-evidence').value,
+      effectRating: $('#skill-effect-rating').value,
+      effectNext: $('#skill-effect-next').value,
+      steps: $('#skill-steps').value,
+      input: $('#skill-input').value,
+      output: $('#skill-output').value,
+      evidence: $('#evidence-url').value,
+      guideInEvidence: $('#skill-guide-in-evidence').checked,
+      updatedAt: new Date().toISOString()
+    };
+  }
+  function saveSubmissionDraft() {
+    const key = submissionDraftKey();
+    if (!key) return;
+    const draft = currentSubmissionDraft();
+    const hasContent = Boolean(
+      draft.title || draft.type !== 'Skill' || draft.visibility !== 'all_partners' || draft.scenario || draft.showcaseLinks || draft.showcaseNote
+      || draft.effectTypes.length || draft.effectOther || draft.effectChange || draft.effectEvidence || draft.effectRating || draft.effectNext
+      || draft.steps || draft.input || draft.output || draft.evidence || draft.guideInEvidence
+    );
+    if (!hasContent) { localStorage.removeItem(key); $('#submission-draft-status').textContent = ''; return; }
+    localStorage.setItem(key, JSON.stringify(draft));
+    $('#submission-draft-status').textContent = '草稿已保存到本机';
+  }
+  function scheduleSubmissionDraftSave() {
+    clearTimeout(submissionDraftTimer);
+    submissionDraftTimer = setTimeout(saveSubmissionDraft, 300);
+  }
+  function clearSubmissionDraft() {
+    const key = submissionDraftKey();
+    if (key) localStorage.removeItem(key);
+    $('#submission-draft-status').textContent = '';
+  }
+  function restoreSubmissionDraft() {
+    const key = submissionDraftKey();
+    if (!key) return;
+    let draft;
+    try { draft = JSON.parse(localStorage.getItem(key) || 'null'); } catch { localStorage.removeItem(key); return; }
+    if (!draft || typeof draft !== 'object') return;
+    $('#skill-title').value = draft.title || '';
+    if ([...$('#skill-type').options].some((option) => option.value === draft.type)) $('#skill-type').value = draft.type;
+    if ([...$('#skill-visibility').options].some((option) => option.value === draft.visibility)) $('#skill-visibility').value = draft.visibility;
+    $('#skill-scenario').value = draft.scenario || '';
+    $('#skill-showcase-links').value = draft.showcaseLinks || '';
+    $('#skill-showcase-note').value = draft.showcaseNote || '';
+    document.querySelectorAll('input[name="skill-effect-type"]').forEach((input) => { input.checked = Array.isArray(draft.effectTypes) && draft.effectTypes.includes(input.value); });
+    $('#skill-effect-other').value = draft.effectOther || '';
+    $('#skill-effect-change').value = draft.effectChange || '';
+    $('#skill-effect-evidence').value = draft.effectEvidence || '';
+    $('#skill-effect-rating').value = draft.effectRating || '';
+    $('#skill-effect-next').value = draft.effectNext || '';
+    $('#skill-steps').value = draft.steps || '';
+    $('#skill-input').value = draft.input || '';
+    $('#skill-output').value = draft.output || '';
+    $('#evidence-url').value = draft.evidence || '';
+    $('#skill-guide-in-evidence').checked = Boolean(draft.guideInEvidence);
+    syncOtherEffectField();
+    $('#skill-file-status').textContent = '草稿已恢复，请重新选择成果文件';
+    $('#skill-showcase-file-status').textContent = '草稿已恢复；如有展示附件，请重新选择文件';
+    $('#submission-draft-status').textContent = '已恢复本机草稿；附件需重新选择';
+  }
   function normalizeEvidence(value) {
     const raw = String(value || '').trim();
     // 从聊天分享文案中只保留第一个 http(s) 链接，避免“【WorkBuddy】hi”等前缀进入核验台账。
@@ -266,6 +343,10 @@
     if (!selected) $('#skill-effect-other').value = '';
   };
   $('#skill-effect-other-toggle').addEventListener('change', syncOtherEffectField);
+  document.querySelectorAll('#self-review-form input:not([type="file"]), #self-review-form textarea, #self-review-form select').forEach((field) => {
+    field.addEventListener('input', scheduleSubmissionDraftSave);
+    field.addEventListener('change', scheduleSubmissionDraftSave);
+  });
   $('#self-review-form').addEventListener('invalid', (event) => {
     const block = event.target.closest('.form-accordion');
     if (block) { block.open = true; syncSubmissionSteps(); }
@@ -299,9 +380,10 @@
     $('#skill-file').value = '';
     $('#skill-file-status').textContent = '请重新选择修改后的成果文件';
     $('#form-message').textContent = '已带回原提交内容。请按审核说明修改，并重新选择成果文件后提交。';
+    saveSubmissionDraft();
     $('#skill-title').focus();
   });
-  $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); });
+  $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); saveSubmissionDraft(); });
   $('#skill-file').addEventListener('change', (event) => {
     const file = event.target.files[0];
     $('#skill-file-status').textContent = file ? `${file.name} · ${formatSize(file.size)}` : '尚未选择文件';
@@ -417,6 +499,7 @@
       $('#skill-tested').checked = false;
       $('#skill-file').value = '';
       $('#skill-file-status').textContent = '成果已提交，等待审核';
+      clearSubmissionDraft();
       $('#form-message').textContent = '成果已进入审核队列，审核通过后将出现在成果库中。';
       setStatus('成果已提交');
       await loadResources();
@@ -440,6 +523,7 @@
           // 伙伴端始终按账号绑定的唯一伙伴记录提交，不提供切换入口。
           activePartner = partners.find((partner) => partner.id === profile.partner_id) || null;
           if (!activePartner) throw new Error('当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。');
+          restoreSubmissionDraft();
         }
       }
       if (window.DfwsCloud.profile) {
