@@ -156,12 +156,31 @@ a.nav-item { text-decoration: none; }
 .personnel-existing { display: grid; gap: 7px; margin-top: 14px; }
 .personnel-existing select { border: 1px solid var(--line); border-radius: 5px; font: inherit; height: 38px; padding: 0 9px; width: 100%; }
 .form-grid[hidden], .personnel-existing[hidden] { display: none !important; }
-.batch-invite-dialog { width: min(1040px, calc(100vw - 28px)); }
-.batch-invite-dialog select[multiple] { height: 184px; padding: 6px; }
-.batch-invite-actions { align-items: center; display: flex; gap: 10px; margin-top: 14px; }
-.batch-invite-summary { background: var(--teal-soft); border: 1px solid #c7e2de; border-radius: 5px; color: #24464a; margin-top: 14px; padding: 10px 12px; }
-.batch-invite-table-wrap { margin-top: 14px; max-height: 380px; }
-.batch-invite-table-wrap .table { min-width: 820px; }
+.organization-dialog { width: min(1120px, calc(100vw - 28px)); }
+.organization-dialog > header { align-items: flex-start; }
+.organization-dialog > header h2 { margin: 0 0 4px; }
+.organization-layout { border: 1px solid var(--line); display: grid; grid-template-columns: minmax(250px, .82fr) minmax(0, 1.7fr); margin-top: 18px; min-height: 480px; }
+.organization-tree-panel { background: #f7fbfa; border-right: 1px solid var(--line); padding: 14px; }
+.organization-members-panel { min-width: 0; padding: 16px; }
+.organization-panel-head { align-items: center; display: flex; gap: 12px; justify-content: space-between; margin-bottom: 13px; }
+.organization-panel-head strong { font-size: 14px; }
+.organization-panel-head .sub { display: block; font-size: 12px; margin-top: 3px; }
+.organization-panel-actions { align-items: center; display: flex; gap: 12px; }
+.organization-tree { display: grid; gap: 2px; max-height: 510px; overflow: auto; }
+.organization-tree-node { display: grid; gap: 2px; }
+.organization-unit-button { align-items: center; background: transparent; border: 0; border-radius: 4px; color: var(--ink); cursor: pointer; display: grid; font: inherit; gap: 7px; grid-template-columns: 13px 1fr auto; min-height: 34px; padding: 6px 8px 6px calc(8px + var(--tree-depth) * 18px); text-align: left; width: 100%; }
+.organization-unit-button:hover, .organization-unit-button.selected { background: #dcefeb; color: #174a50; }
+.organization-unit-button > span { color: var(--teal); font-size: 11px; }
+.organization-unit-button strong { font-size: 13px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.organization-unit-button small { background: #e2ecea; border-radius: 9px; color: #4c6667; font-size: 11px; font-variant-numeric: tabular-nums; padding: 1px 6px; }
+.organization-member-list { border-top: 1px solid var(--line); }
+.organization-person-row { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 14px; justify-content: space-between; padding: 12px 2px; }
+.organization-person-row > div { display: grid; gap: 3px; min-width: 0; }
+.organization-person-row strong { font-size: 13px; }
+.organization-person-row span, .organization-person-row small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.organization-person-row .badge { color: #4c6667; justify-self: end; }
+.organization-person-row .badge.v3 { color: var(--teal); }
+.organization-person-row .badge.v0 { color: #8d5d25; }
 .skill-library-summary { align-items: center; background: var(--teal-soft); border: 1px solid #c7e2de; border-radius: 6px; display: flex; gap: 18px; justify-content: space-between; margin-bottom: 16px; padding: 12px 14px; }
 .skill-library-summary strong { color: var(--teal); font-size: 20px; }
 .skill-summary-filter { background: transparent; border: 0; color: inherit; cursor: pointer; font: inherit; padding: 0; text-align: left; }
@@ -212,9 +231,9 @@ a.nav-item { text-decoration: none; }
 #admin-skill-dialog .check-field input { flex: 0 0 auto; min-height: auto; width: auto; }
 #admin-skill-dialog .check-field span { display: inline; }
 @media (max-width: 600px) { .skill-library-summary { align-items: flex-start; flex-direction: column; gap: 4px; }.reuse-ranking .section-head { align-items: flex-start; flex-direction: column; }.reuse-ranking .section-head label { align-items: flex-start; flex-direction: column; }.skill-card-grid { grid-template-columns: 1fr; }.skill-card-actions { align-items: stretch; }.skill-card-actions .button { flex: 1; } }
-@media (max-width: 960px) { .permission-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 960px) { .permission-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }.organization-layout { grid-template-columns: 1fr; }.organization-tree-panel { border-bottom: 1px solid var(--line); border-right: 0; }.organization-tree { max-height: 260px; } }
 @media (max-width: 760px) { .asset-type-guide-grid { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .permission-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }.permission-kpi { min-height: 90px; padding: 12px; }.permission-kpi strong { font-size: 23px; }.partner-picker-tools input { min-width: 100%; }.partner-picker-item { align-items: flex-start; flex-direction: column; gap: 3px; }.partner-picker-item span { padding-left: 8px; } }
+@media (max-width: 600px) { .permission-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }.permission-kpi { min-height: 90px; padding: 12px; }.permission-kpi strong { font-size: 23px; }.partner-picker-tools input { min-width: 100%; }.partner-picker-item { align-items: flex-start; flex-direction: column; gap: 3px; }.partner-picker-item span { padding-left: 8px; }.organization-panel-head { align-items: flex-start; flex-direction: column; }.organization-panel-actions { align-items: flex-start; flex-direction: column; gap: 8px; }.organization-person-row { align-items: flex-start; flex-direction: column; gap: 7px; }.organization-person-row .badge { justify-self: start; } }
 .step { background: var(--teal-soft); border-radius: 4px; color: var(--teal); font-size: 11px; font-weight: 800; padding: 3px 5px; }
 .review-save { align-items: center; display: flex; justify-content: space-between; margin-top: 16px; }
 
