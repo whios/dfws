@@ -1,6 +1,7 @@
 const staffRoles = new Set(['manager', 'brand_admin', 'ai_officer']);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
+const allowedBrands = new Set(['迈点', '最佳东方', '乔邦', '先之', '技术中心', '职能']);
 
 function reply(response, status, body) {
   response.status(status).setHeader('Content-Type', 'application/json; charset=utf-8').send(JSON.stringify(body));
@@ -31,6 +32,16 @@ function cleanUnitIds(value) {
   const ids = [...new Set((Array.isArray(value) ? value : []).map((id) => String(id || '').trim()).filter((id) => uuidPattern.test(id)))];
   if (!ids.length) throw new Error('请至少选择一个归属部门。');
   return ids;
+}
+
+function normalizedName(value) {
+  return String(value || '').trim().split(/\s*[-－—]\s*/)[0].trim();
+}
+
+async function readPeople(ids) {
+  const selected = [...new Set((Array.isArray(ids) ? ids : []).map((id) => String(id || '').trim()))];
+  if (!selected.length || selected.some((id) => !uuidPattern.test(id))) throw new Error('待绑定人员无效，请刷新后重试。');
+  return supabaseFetch(`/rest/v1/organization_people?id=in.(${encodeURIComponent(selected.join(','))})&select=id,display_name,partner_id`, { headers: serviceHeaders() });
 }
 
 async function listDirectory() {
@@ -82,6 +93,45 @@ export default async function handler(request, response) {
       await supabaseFetch(`/rest/v1/organization_memberships?person_id=eq.${encodeURIComponent(personId)}`, { method: 'DELETE', headers: serviceHeaders() });
       await supabaseFetch('/rest/v1/organization_memberships', { method: 'POST', headers: { ...serviceHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(unitIds.map((unitId) => ({ person_id: personId, unit_id: unitId }))) });
       return reply(response, 200, { ok: true, personId });
+    }
+    if (action === 'apply_binding_decisions') {
+      const decisions = Array.isArray(request.body?.decisions) ? request.body.decisions : [];
+      if (!decisions.length || decisions.length > 100) return reply(response, 400, { error: '请选择 1 到 100 位待处理人员。' });
+      const people = await readPeople(decisions.map((item) => item?.personId));
+      const peopleById = new Map(people.map((person) => [person.id, person]));
+      const results = [];
+      for (const decision of decisions) {
+        const personId = String(decision?.personId || '').trim();
+        const person = peopleById.get(personId);
+        if (!person) { results.push({ personId, status: 'skipped', reason: '通讯录人员不存在。' }); continue; }
+        if (person.partner_id) { results.push({ personId, status: 'skipped', reason: '已绑定伙伴档案。' }); continue; }
+        const mode = String(decision?.mode || '');
+        try {
+          let partnerId = null;
+          if (mode === 'bind_existing') {
+            partnerId = String(decision?.partnerId || '').trim();
+            if (!uuidPattern.test(partnerId)) throw new Error('未选择有效的伙伴档案。');
+            const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(partnerId)}&select=id,owner_name`, { headers: serviceHeaders() });
+            if (!partners?.length || normalizedName(partners[0].owner_name) !== normalizedName(person.display_name)) throw new Error('候选伙伴姓名不匹配，未执行绑定。');
+          } else if (mode === 'create_partner') {
+            const brand = String(decision?.brand || '').trim();
+            const department = String(decision?.department || '').trim();
+            if (!allowedBrands.has(brand) || !department) throw new Error('新建伙伴缺少品牌或部门。');
+            const created = await supabaseFetch('/rest/v1/partners?on_conflict=owner_name,brand,department', {
+              method: 'POST', headers: { ...serviceHeaders(), Prefer: 'resolution=merge-duplicates,return=representation' },
+              body: JSON.stringify({ owner_name: person.display_name, brand, department })
+            });
+            partnerId = created?.[0]?.id || null;
+            if (!partnerId) throw new Error('伙伴档案创建失败。');
+          } else { throw new Error('未知的绑定处理方式。'); }
+          const updated = await supabaseFetch(`/rest/v1/organization_people?id=eq.${encodeURIComponent(person.id)}&partner_id=is.null`, {
+            method: 'PATCH', headers: { ...serviceHeaders(), Prefer: 'return=representation' }, body: JSON.stringify({ partner_id: partnerId, updated_at: new Date().toISOString() })
+          });
+          if (!updated?.length) throw new Error('该人员刚刚被其他操作绑定，请刷新后查看。');
+          results.push({ personId, status: 'bound', reason: mode === 'create_partner' ? '已新建伙伴档案并绑定。' : '已绑定既有伙伴档案。' });
+        } catch (error) { results.push({ personId, status: 'failed', reason: error?.message || '绑定失败。' }); }
+      }
+      return reply(response, 200, { ok: true, bound: results.filter((item) => item.status === 'bound').length, failed: results.filter((item) => item.status === 'failed').length, skipped: results.filter((item) => item.status === 'skipped').length, results });
     }
     return reply(response, 400, { error: '未知的组织通讯录操作。' });
   } catch (error) {
