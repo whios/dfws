@@ -5,83 +5,59 @@ function permissions() {
   const roles = [['partner', '伙伴'], ['manager', '负责人'], ['brand_admin', '品牌管理员'], ['ai_officer', 'AI 应用官'], ['leader', '领导只读']];
   const roleName = new Map(roles);
   view.innerHTML = `
-    <div class="toolbar"><div><strong>人员与权限</strong><div class="sub personnel-intro">统一维护账号、角色和伙伴档案；邀请后由伙伴自行设置密码。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-profiles">刷新</button><button class="button secondary" id="batch-invite">按部门批量开通</button><button class="button primary" id="add-person">新增人员</button></div>
+    <div class="toolbar"><div><strong>人员与权限</strong><div class="sub personnel-intro">统一维护账号、角色和伙伴档案；邀请后由伙伴自行设置密码。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-profiles">刷新</button><button class="button secondary" id="organization-directory">组织通讯录</button><button class="button primary" id="add-person">新增人员</button></div>
     <div id="permission-kpis" class="permission-kpis"></div>
     <div class="toolbar"><input id="profile-search" placeholder="搜索姓名、邮箱、品牌或部门" /><select id="profile-brand"><option value="">全部品牌</option></select><select id="profile-role"><option value="">全部角色</option></select><select id="profile-binding"><option value="">全部绑定状态</option><option value="bound">已绑定伙伴</option><option value="unbound">待绑定</option><option value="conflict">绑定冲突</option></select><span class="sub" id="profile-count"></span></div>
     <article class="card table-wrap"><table class="table permission-table"><thead><tr><th>账号</th><th>品牌 / 部门</th><th>当前角色</th><th>绑定伙伴</th><th>状态</th><th></th></tr></thead><tbody id="profile-body"><tr><td colspan="6" class="empty">正在加载账号...</td></tr></tbody></table></article>
     <dialog id="partner-picker-dialog" class="dialog"><form method="dialog"><header><h2>选择绑定伙伴</h2><button class="icon-button" value="cancel" aria-label="关闭">x</button></header><div class="toolbar partner-picker-tools"><select id="partner-picker-brand"><option value="">全部品牌</option></select><input id="partner-picker-search" placeholder="搜索姓名或部门" /><span class="sub" id="partner-picker-count"></span></div><div class="partner-picker-list" id="partner-picker-list"></div><footer><button value="cancel" class="button secondary">取消</button></footer></form></dialog>
     <dialog id="person-dialog" class="dialog"><form id="person-form"><header><h2>新增人员并发送邀请</h2><button class="icon-button" type="button" data-close-person aria-label="关闭">x</button></header><p class="sub">系统会创建账号、设置角色和绑定关系，再发送“设置密码”邮件。</p><div class="form-grid"><label>姓名<input id="person-name" required maxlength="40" placeholder="例如：曹沁" /></label><label>公司邮箱<input id="person-email" required type="email" placeholder="name@dfwsgroup.com" /></label><label>角色<select id="person-role">${roles.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><label>伙伴档案<select id="person-bind-mode"><option value="existing">绑定已有伙伴记录</option><option value="new">新建伙伴记录并绑定</option><option value="none">暂不绑定伙伴记录</option></select></label></div><div id="person-existing" class="personnel-existing"><label class="sub" for="person-partner">选择已有伙伴</label><select id="person-partner"></select></div><div id="person-new" class="form-grid" hidden><label>品牌<select id="person-brand"></select></label><label>部门<input id="person-department" placeholder="例如：新闻部" /></label></div><p class="personnel-form-note" id="person-form-note">创建后会立即发送设置密码邮件。伙伴角色绑定成功后，只能查看和提交自己的数据。</p><footer><button class="button secondary" type="button" data-close-person>取消</button><button class="button primary" id="person-submit" type="submit">创建并发送邀请</button></footer></form></dialog>
-    <dialog id="batch-invite-dialog" class="dialog batch-invite-dialog"><form id="batch-invite-form"><header><h2>按部门批量开通</h2><button class="icon-button" type="button" data-close-batch-invite aria-label="关闭">x</button></header><p class="sub">Excel 仅在当前浏览器读取。系统只会勾选“未注册且能唯一匹配现有伙伴记录”的人员。</p><div class="form-grid"><label class="full">通讯录 Excel<input id="batch-invite-file" type="file" accept=".xlsx,.xls" /></label><label class="full">选择部门（可多选）<select id="batch-invite-departments" multiple size="7" disabled></select></label></div><div class="batch-invite-actions"><button class="button secondary" type="button" id="batch-invite-preview" disabled>生成开通预览</button><span class="sub" id="batch-invite-message"></span></div><div id="batch-invite-summary" class="batch-invite-summary" hidden></div><div class="table-wrap batch-invite-table-wrap" hidden><table class="table"><thead><tr><th>姓名</th><th>邮箱</th><th>通讯录部门</th><th>匹配伙伴</th><th>结果</th></tr></thead><tbody id="batch-invite-body"></tbody></table></div><footer><button class="button secondary" type="button" data-close-batch-invite>取消</button><button class="button primary" id="batch-invite-submit" type="submit" disabled>确认开通并发送邀请</button></footer></form></dialog>`;
+    <dialog id="organization-dialog" class="dialog organization-dialog"><header><div><h2>组织通讯录</h2><p class="sub">部门和人员在系统内维护。选择一个部门后可先预览，再向未开通的伙伴发送邀请。</p></div><button class="icon-button" type="button" data-close-organization aria-label="关闭">x</button></header><div class="organization-layout"><section class="organization-tree-panel"><div class="organization-panel-head"><strong>组织架构</strong><button class="action-link" type="button" id="add-organization-unit">新增部门</button></div><div class="organization-tree" id="organization-tree"><div class="empty">正在读取组织通讯录...</div></div></section><section class="organization-members-panel"><div class="organization-panel-head"><div><strong id="organization-unit-title">选择部门</strong><span class="sub" id="organization-unit-summary"></span></div><div class="organization-panel-actions"><button class="action-link" type="button" id="add-organization-person">新增人员</button><button class="button primary" type="button" id="invite-organization-unit" disabled>预览并发送邀请</button></div></div><div class="organization-member-list" id="organization-member-list"><div class="empty">请选择左侧部门查看人员。</div></div></section></div><footer><button class="button secondary" type="button" data-close-organization>关闭</button></footer></dialog>
+    <dialog id="organization-unit-dialog" class="dialog"><form id="organization-unit-form"><header><h2>新增部门</h2><button class="icon-button" type="button" data-close-organization-unit aria-label="关闭">x</button></header><div class="form-grid"><label>部门名称<input id="organization-unit-name" required maxlength="60" /></label><label>上级部门<select id="organization-unit-parent"><option value="">作为一级部门</option></select></label><label>所属品牌（选填）<select id="organization-unit-brand"><option value="">未设置</option><option>迈点</option><option>最佳东方</option><option>乔邦</option><option>先之</option><option>技术中心</option><option>职能</option></select></label></div><footer><button class="button secondary" type="button" data-close-organization-unit>取消</button><button class="button primary" type="submit">保存部门</button></footer></form></dialog>
+    <dialog id="organization-person-dialog" class="dialog"><form id="organization-person-form"><header><h2>新增通讯录人员</h2><button class="icon-button" type="button" data-close-organization-person aria-label="关闭">x</button></header><p class="sub">只有已绑定伙伴档案的人员才会进入邀请预览，避免误创建或覆盖历史数据。</p><div class="form-grid"><label>姓名<input id="organization-person-name" required maxlength="40" /></label><label>公司邮箱<input id="organization-person-email" required type="email" /></label><label class="full">归属部门（可多选）<select id="organization-person-units" multiple size="7"></select></label><label class="full">绑定已有伙伴档案<select id="organization-person-partner"><option value="">暂不绑定</option></select></label></div><footer><button class="button secondary" type="button" data-close-organization-person>取消</button><button class="button primary" type="submit">保存人员</button></footer></form></dialog>`;
 
   let data = null;
   let pickerProfileId = null;
-  let importedDirectory = [];
-  let batchPreview = [];
-  let batchResults = new Map();
+  let organization = null;
+  let selectedOrganizationUnitId = null;
   const partnerOption = (partner) => `<option value="${esc(partner.id)}">${esc(partner.owner_name)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`;
-  const directoryName = (value) => String(value || '').trim().split(/\s*[-－—]\s*/)[0].trim();
-  const directoryBrand = (department) => {
-    const text = String(department || '');
-    if (text.includes('最佳东方')) return '最佳东方';
-    if (text.includes('迈点')) return '迈点';
-    if (text.includes('乔邦')) return '乔邦';
-    if (text.includes('先之')) return '先之';
-    if (text.includes('产品技术中心')) return '技术中心';
-    return '职能';
+  const orgUnitLabel = (unit) => `${unit.name}${unit.brand ? ` · ${unit.brand}` : ''}`;
+  const organizationMembersFor = (unitId, includeChildren = true) => {
+    const childIds = new Set([unitId]);
+    if (includeChildren) {
+      let changed = true;
+      while (changed) { changed = false; (organization?.units || []).forEach((unit) => { if (unit.parent_id && childIds.has(unit.parent_id) && !childIds.has(unit.id)) { childIds.add(unit.id); changed = true; } }); }
+    }
+    const personIds = new Set((organization?.memberships || []).filter((membership) => childIds.has(membership.unit_id)).map((membership) => membership.person_id));
+    return (organization?.people || []).filter((person) => personIds.has(person.id));
   };
-  const selectedDepartments = () => [...$('#batch-invite-departments').selectedOptions].map((option) => option.value);
-  const updateBatchPreview = () => {
-    const departments = selectedDepartments();
-    if (!departments.length) { $('#batch-invite-message').textContent = '请至少选择一个部门。'; return; }
-    const openedEmails = new Set((data?.profiles || []).map((profile) => String(profile.email || '').toLowerCase()));
-    const boundPartners = new Set((data?.profiles || []).map((profile) => profile.partner_id).filter(Boolean));
-    batchPreview = importedDirectory.filter((item) => departments.includes(item.department)).map((item) => {
-      const processed = batchResults.get(item.email);
-      const brand = directoryBrand(item.department);
-      const candidates = (data?.partners || []).filter((partner) => directoryName(partner.owner_name) === item.name && partner.brand === brand);
-      const partner = candidates.length === 1 ? candidates[0] : null;
-      let result = '待确认';
-      let reason = '未找到同名同品牌的唯一伙伴记录。';
-      if (processed) { result = processed.status === 'invited' ? '已发送' : processed.status === 'failed' ? '发送失败' : '跳过'; reason = processed.reason; }
-      else if (openedEmails.has(item.email)) { result = '跳过'; reason = '该邮箱已经开通账号。'; }
-      else if (candidates.length > 1) { reason = '匹配到多个伙伴记录，需要人工确认。'; }
-      else if (partner && boundPartners.has(partner.id)) { result = '跳过'; reason = '该伙伴记录已绑定其他账号。'; }
-      else if (partner) { result = '可开通'; reason = `将绑定：${partner.owner_name} · ${partner.brand} · ${partner.department}`; }
-      return { ...item, brand, partner, result, reason };
-    });
-    const ready = batchPreview.filter((item) => item.result === '可开通').length;
-    const skipped = batchPreview.filter((item) => item.result === '跳过').length;
-    const pending = batchPreview.length - ready - skipped;
-    $('#batch-invite-summary').hidden = false;
-    $('#batch-invite-summary').innerHTML = `<strong>预览完成：</strong>共 ${batchPreview.length} 人 · 可开通 ${ready} 人 · 已跳过 ${skipped} 人 · 待确认 ${pending} 人。待确认人员不会收到邮件。`;
-    $('#batch-invite-body').innerHTML = batchPreview.map((item) => `<tr><td>${esc(item.name)}</td><td>${esc(item.email)}</td><td>${esc(item.department)}</td><td>${item.partner ? esc(`${item.partner.owner_name} · ${item.partner.brand} · ${item.partner.department}`) : '<span class="sub">未自动绑定</span>'}</td><td><strong>${esc(item.result)}</strong><br><span class="sub">${esc(item.reason)}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty">所选部门没有可用邮箱。</td></tr>';
-    $('.batch-invite-table-wrap').hidden = false;
-    $('#batch-invite-submit').disabled = ready === 0;
-    $('#batch-invite-message').textContent = ready ? '请确认预览名单后再发送邀请。' : '当前没有可安全开通的人员。';
+  const organizationStatus = (person) => {
+    const opened = (organization?.profiles || []).some((profile) => String(profile.email || '').toLowerCase() === String(person.email || '').toLowerCase());
+    if (opened) return ['已开通', '账号已存在'];
+    if (!person.partner_id) return ['待绑定', '请先绑定伙伴档案'];
+    const bound = (organization?.profiles || []).some((profile) => profile.partner_id === person.partner_id);
+    return bound ? ['已开通', '伙伴已绑定账号'] : ['可邀请', '将发送设置密码邮件'];
   };
-  const importDirectoryFile = async (file) => {
-    if (!window.XLSX) throw new Error('通讯录读取组件未加载，请刷新页面后重试。');
-    const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    const headerIndex = rows.findIndex((row) => row.includes('姓名') && row.includes('部门') && row.includes('邮箱'));
-    if (headerIndex < 0) throw new Error('未找到“姓名、部门、邮箱”列，请使用企业微信通讯录导出的 Excel。');
-    const headers = rows[headerIndex];
-    const nameIndex = headers.indexOf('姓名');
-    const departmentIndex = headers.indexOf('部门');
-    const emailIndex = headers.indexOf('邮箱');
-    const emails = new Set();
-    importedDirectory = rows.slice(headerIndex + 1).map((row) => ({ name: directoryName(row[nameIndex]), department: String(row[departmentIndex] || '').trim(), email: String(row[emailIndex] || '').trim().toLowerCase() })).filter((item) => item.name && item.department && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email) && !emails.has(item.email) && emails.add(item.email));
-    if (!importedDirectory.length) throw new Error('文件中没有可用的姓名、部门和邮箱记录。');
-    const departments = [...new Set(importedDirectory.map((item) => item.department))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
-    $('#batch-invite-departments').innerHTML = departments.map((department) => `<option value="${esc(department)}">${esc(department)}（${importedDirectory.filter((item) => item.department === department).length} 人）</option>`).join('');
-    $('#batch-invite-departments').disabled = false;
-    $('#batch-invite-preview').disabled = false;
-    $('#batch-invite-message').textContent = `已读取 ${importedDirectory.length} 人。请选择要开通的部门。`;
-    $('#batch-invite-summary').hidden = true;
-    $('.batch-invite-table-wrap').hidden = true;
-    $('#batch-invite-submit').disabled = true;
+  const renderOrganization = () => {
+    const units = organization?.units || [];
+    const children = new Map();
+    units.forEach((unit) => { const key = unit.parent_id || 'root'; children.set(key, [...(children.get(key) || []), unit]); });
+    const renderUnit = (unit, depth = 0) => {
+      const descendantPeople = organizationMembersFor(unit.id).length;
+      const next = (children.get(unit.id) || []).map((child) => renderUnit(child, depth + 1)).join('');
+      return `<div class="organization-tree-node"><button class="organization-unit-button ${selectedOrganizationUnitId === unit.id ? 'selected' : ''}" type="button" data-organization-unit="${unit.id}" style="--tree-depth:${depth}"><span>${next ? '▾' : '•'}</span><strong>${esc(unit.name)}</strong><small>${descendantPeople}</small></button>${next}</div>`;
+    };
+    $('#organization-tree').innerHTML = (children.get('root') || []).map((unit) => renderUnit(unit)).join('') || '<div class="empty">尚未建立组织部门。</div>';
+    $('#organization-unit-parent').innerHTML = `<option value="">作为一级部门</option>${units.map((unit) => `<option value="${unit.id}">${esc(orgUnitLabel(unit))}</option>`).join('')}`;
+    $('#organization-person-units').innerHTML = units.map((unit) => `<option value="${unit.id}">${esc(orgUnitLabel(unit))}</option>`).join('');
+    $('#organization-person-partner').innerHTML = `<option value="">暂不绑定</option>${(organization?.partners || []).map(partnerOption).join('')}`;
+    const unit = units.find((item) => item.id === selectedOrganizationUnitId);
+    const people = unit ? organizationMembersFor(unit.id) : [];
+    $('#organization-unit-title').textContent = unit ? unit.name : '选择部门';
+    $('#organization-unit-summary').textContent = unit ? `含下级部门共 ${people.length} 人` : '';
+    $('#invite-organization-unit').disabled = !people.length;
+    $('#organization-member-list').innerHTML = unit ? people.map((person) => { const [state, note] = organizationStatus(person); return `<article class="organization-person-row"><div><strong>${esc(person.display_name)}</strong><span>${esc(person.email)}</span></div><div><span class="badge ${state === '可邀请' ? 'v3' : state === '待绑定' ? 'v0' : ''}">${state}</span><small>${esc(note)}</small></div></article>`; }).join('') || '<div class="empty">该部门及下级部门暂无人员。</div>' : '<div class="empty">请选择左侧部门查看人员。</div>';
   };
+  const loadOrganization = async () => { organization = await window.DfwsCloud.organizationDirectory(); renderOrganization(); };
   const setCreateMode = () => {
     const mode = $('#person-bind-mode').value;
     $('#person-existing').hidden = mode !== 'existing';
@@ -159,19 +135,11 @@ function permissions() {
     } catch (error) { $('#profile-body').innerHTML = `<tr><td colspan="6" class="empty">${esc(error.message || '加载失败')}</td></tr>`; }
   };
   $('#add-person').onclick = () => { $('#person-form').reset(); $('#person-bind-mode').value = 'existing'; setCreateMode(); $('#person-dialog').showModal(); };
-  $('#batch-invite').onclick = () => {
-    importedDirectory = [];
-    batchPreview = [];
-    batchResults = new Map();
-    $('#batch-invite-form').reset();
-    $('#batch-invite-departments').innerHTML = '';
-    $('#batch-invite-departments').disabled = true;
-    $('#batch-invite-preview').disabled = true;
-    $('#batch-invite-submit').disabled = true;
-    $('#batch-invite-summary').hidden = true;
-    $('.batch-invite-table-wrap').hidden = true;
-    $('#batch-invite-message').textContent = '请先选择企业微信通讯录 Excel。';
-    $('#batch-invite-dialog').showModal();
+  $('#organization-directory').onclick = async () => {
+    $('#organization-dialog').showModal();
+    $('#organization-tree').innerHTML = '<div class="empty">正在读取组织通讯录...</div>';
+    try { await loadOrganization(); }
+    catch (error) { $('#organization-tree').innerHTML = `<div class="empty">${esc(error.message || '组织通讯录加载失败')}</div>`; }
   };
   $('#refresh-profiles').onclick = load;
   $('#person-bind-mode').onchange = setCreateMode;
@@ -180,32 +148,42 @@ function permissions() {
     if (partner) $('#person-name').value = partner.owner_name;
   };
   $$('[data-close-person]').forEach((button) => button.onclick = () => $('#person-dialog').close());
-  $$('[data-close-batch-invite]').forEach((button) => button.onclick = () => $('#batch-invite-dialog').close());
-  $('#batch-invite-file').onchange = async () => {
-    const file = $('#batch-invite-file').files[0];
-    if (!file) return;
-    try { await importDirectoryFile(file); }
-    catch (error) { $('#batch-invite-message').textContent = error.message || '读取通讯录失败。'; }
+  $$('[data-close-organization]').forEach((button) => button.onclick = () => $('#organization-dialog').close());
+  $$('[data-close-organization-unit]').forEach((button) => button.onclick = () => $('#organization-unit-dialog').close());
+  $$('[data-close-organization-person]').forEach((button) => button.onclick = () => $('#organization-person-dialog').close());
+  $('#organization-tree').onclick = (event) => {
+    const unitId = event.target.closest('[data-organization-unit]')?.dataset.organizationUnit;
+    if (!unitId) return;
+    selectedOrganizationUnitId = unitId; renderOrganization();
   };
-  $('#batch-invite-preview').onclick = updateBatchPreview;
-  $('#batch-invite-form').onsubmit = async (event) => {
+  $('#add-organization-unit').onclick = () => { $('#organization-unit-form').reset(); $('#organization-unit-parent').value = selectedOrganizationUnitId || ''; $('#organization-unit-dialog').showModal(); };
+  $('#add-organization-person').onclick = () => { $('#organization-person-form').reset(); renderOrganization(); if (selectedOrganizationUnitId) $('#organization-person-units').value = selectedOrganizationUnitId; $('#organization-person-dialog').showModal(); };
+  $('#organization-unit-form').onsubmit = async (event) => {
     event.preventDefault();
-    const records = batchPreview.filter((item) => item.result === '可开通').map((item) => ({ displayName: item.name, email: item.email, partnerId: item.partner.id }));
-    if (!records.length) { toast('当前没有可安全开通的人员。'); return; }
-    if (!confirm(`确认开通 ${records.length} 个伙伴账号，并向对应邮箱发送设置密码邮件？`)) return;
-    const button = $('#batch-invite-submit');
     try {
-      button.disabled = true;
-      button.textContent = '正在开通并发送...';
-      const result = await window.DfwsCloud.batchInviteMembers(records);
-      batchResults = new Map((result.results || []).map((item) => [item.email, item]));
-      const invited = Number(result.invited || 0);
-      $('#batch-invite-message').textContent = `已开通 ${invited} 人；跳过 ${result.skipped || 0} 人；失败 ${result.failed || 0} 人。`;
-      await load();
-      updateBatchPreview();
-      toast(`批量处理完成：已发送 ${invited} 封邀请邮件`);
-    } catch (error) { toast(error.message || '批量开通失败'); }
-    finally { button.textContent = '确认开通并发送邀请'; }
+      await window.DfwsCloud.saveOrganizationDirectory({ action: 'create_unit', name: $('#organization-unit-name').value.trim(), parentId: $('#organization-unit-parent').value, brand: $('#organization-unit-brand').value });
+      $('#organization-unit-dialog').close(); await loadOrganization(); toast('部门已添加到组织通讯录');
+    } catch (error) { toast(error.message || '部门保存失败'); }
+  };
+  $('#organization-person-form').onsubmit = async (event) => {
+    event.preventDefault();
+    try {
+      await window.DfwsCloud.saveOrganizationDirectory({ action: 'save_person', displayName: $('#organization-person-name').value.trim(), email: $('#organization-person-email').value.trim(), partnerId: $('#organization-person-partner').value, unitIds: [...$('#organization-person-units').selectedOptions].map((item) => item.value) });
+      $('#organization-person-dialog').close(); await loadOrganization(); toast('人员已加入组织通讯录');
+    } catch (error) { toast(error.message || '人员保存失败'); }
+  };
+  $('#invite-organization-unit').onclick = async () => {
+    const people = organizationMembersFor(selectedOrganizationUnitId).filter((person) => organizationStatus(person)[0] === '可邀请');
+    if (!people.length) { toast('该部门没有可安全邀请的人员，请先补齐伙伴绑定。'); return; }
+    if (!confirm(`确认向 ${people.length} 位未开通伙伴发送设置密码邮件？已开通、待绑定人员不会发送。`)) return;
+    const button = $('#invite-organization-unit');
+    try {
+      button.disabled = true; button.textContent = '正在发送...';
+      const result = await window.DfwsCloud.inviteOrganizationMembers(people.map((person) => person.id));
+      toast(`邀请完成：已发送 ${result.invited} 人，跳过 ${result.skipped} 人，失败 ${result.failed} 人`);
+      await Promise.all([loadOrganization(), load()]);
+    } catch (error) { toast(error.message || '批量邀请失败'); }
+    finally { button.textContent = '预览并发送邀请'; }
   };
   $('#person-form').onsubmit = async (event) => {
     event.preventDefault();

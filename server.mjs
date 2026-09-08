@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import deleteSkillResource from './api/staff/delete-skill-resource.js';
 import inviteMember from './api/staff/invite-member.js';
 import batchInviteMembers from './api/staff/batch-invite-members.js';
+import organizationDirectory from './api/staff/organization-directory.js';
+import inviteOrganizationMembers from './api/staff/invite-organization-members.js';
 import sendPasswordSetupEmail from './api/staff/send-password-setup-email.js';
 import sendSkillReviewEmail from './api/staff/send-skill-review-email.js';
 
@@ -14,6 +16,8 @@ const apiHandlers = new Map([
   ['/api/staff/delete-skill-resource', deleteSkillResource],
   ['/api/staff/invite-member', inviteMember],
   ['/api/staff/batch-invite-members', batchInviteMembers],
+  ['/api/staff/organization-directory', organizationDirectory],
+  ['/api/staff/invite-organization-members', inviteOrganizationMembers],
   ['/api/staff/send-password-setup-email', sendPasswordSetupEmail],
   ['/api/staff/send-skill-review-email', sendSkillReviewEmail]
 ]);
