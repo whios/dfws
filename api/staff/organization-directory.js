@@ -44,6 +44,19 @@ async function readPeople(ids) {
   return supabaseFetch(`/rest/v1/organization_people?id=in.(${encodeURIComponent(selected.join(','))})&select=id,display_name,partner_id`, { headers: serviceHeaders() });
 }
 
+async function findPartner(ownerName, brand, department) {
+  const query = new URLSearchParams({
+    owner_name: `eq.${ownerName}`,
+    brand: `eq.${brand}`,
+    department: `eq.${department}`,
+    select: 'id',
+    order: 'id.asc',
+    limit: '1'
+  });
+  const partners = await supabaseFetch(`/rest/v1/partners?${query.toString()}`, { headers: serviceHeaders() });
+  return partners?.[0] || null;
+}
+
 async function listDirectory() {
   const [units, people, memberships, partners, profiles] = await Promise.all([
     supabaseFetch('/rest/v1/organization_units?select=id,name,parent_id,brand,sort_order&order=sort_order.asc,name.asc', { headers: serviceHeaders() }),
@@ -117,11 +130,24 @@ export default async function handler(request, response) {
             const brand = String(decision?.brand || '').trim();
             const department = String(decision?.department || '').trim();
             if (!allowedBrands.has(brand) || !department) throw new Error('新建伙伴缺少品牌或部门。');
-            const created = await supabaseFetch('/rest/v1/partners?on_conflict=owner_name,brand,department', {
-              method: 'POST', headers: { ...serviceHeaders(), Prefer: 'resolution=merge-duplicates,return=representation' },
-              body: JSON.stringify({ owner_name: person.display_name, brand, department })
-            });
-            partnerId = created?.[0]?.id || null;
+            // Do not depend on a database upsert constraint that may not exist in older deployments.
+            const existing = await findPartner(person.display_name, brand, department);
+            if (existing) {
+              partnerId = existing.id;
+            } else {
+              try {
+                const created = await supabaseFetch('/rest/v1/partners', {
+                  method: 'POST', headers: { ...serviceHeaders(), Prefer: 'return=representation' },
+                  body: JSON.stringify({ owner_name: person.display_name, brand, department })
+                });
+                partnerId = created?.[0]?.id || null;
+              } catch (error) {
+                // A concurrent admin operation may have created the same record. Reuse it if so.
+                const concurrent = await findPartner(person.display_name, brand, department);
+                if (!concurrent) throw error;
+                partnerId = concurrent.id;
+              }
+            }
             if (!partnerId) throw new Error('伙伴档案创建失败。');
           } else { throw new Error('未知的绑定处理方式。'); }
           const updated = await supabaseFetch(`/rest/v1/organization_people?id=eq.${encodeURIComponent(person.id)}&partner_id=is.null`, {

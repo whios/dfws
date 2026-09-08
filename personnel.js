@@ -228,7 +228,11 @@ function permissions() {
     try {
       button.disabled = true; button.textContent = '正在处理...';
       const result = await window.DfwsCloud.saveOrganizationDirectory({ action: 'apply_binding_decisions', decisions });
-      toast(`绑定完成：成功 ${result.bound} 人，跳过 ${result.skipped} 人，失败 ${result.failed} 人`);
+      const failures = (result.results || []).filter((item) => item.status === 'failed').map((item) => {
+        const plan = organizationBindingPlans.find((entry) => entry.person.id === item.personId);
+        return `${plan?.person?.display_name || '未知人员'}：${item.reason || '绑定失败'}`;
+      });
+      toast(`绑定完成：成功 ${result.bound} 人，跳过 ${result.skipped} 人，失败 ${result.failed} 人${failures.length ? `。${failures.join('；')}` : ''}`);
       $('#organization-binding-dialog').close(); await Promise.all([loadOrganization(), load()]);
     } catch (error) { toast(error.message || '伙伴绑定处理失败'); }
     finally { button.textContent = '确认处理'; }
