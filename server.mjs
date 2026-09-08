@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import deleteSkillResource from './api/staff/delete-skill-resource.js';
 import inviteMember from './api/staff/invite-member.js';
+import batchInviteMembers from './api/staff/batch-invite-members.js';
 import sendPasswordSetupEmail from './api/staff/send-password-setup-email.js';
 import sendSkillReviewEmail from './api/staff/send-skill-review-email.js';
 
@@ -12,6 +13,7 @@ const port = Number(process.env.PORT || 3000);
 const apiHandlers = new Map([
   ['/api/staff/delete-skill-resource', deleteSkillResource],
   ['/api/staff/invite-member', inviteMember],
+  ['/api/staff/batch-invite-members', batchInviteMembers],
   ['/api/staff/send-password-setup-email', sendPasswordSetupEmail],
   ['/api/staff/send-skill-review-email', sendSkillReviewEmail]
 ]);
