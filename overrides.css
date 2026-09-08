@@ -156,16 +156,21 @@ a.nav-item { text-decoration: none; }
 .personnel-existing { display: grid; gap: 7px; margin-top: 14px; }
 .personnel-existing select { border: 1px solid var(--line); border-radius: 5px; font: inherit; height: 38px; padding: 0 9px; width: 100%; }
 .form-grid[hidden], .personnel-existing[hidden] { display: none !important; }
-.organization-dialog { width: min(1120px, calc(100vw - 28px)); }
-.organization-dialog > header { align-items: flex-start; }
+.organization-dialog { width: min(1120px, calc(100vw - 40px)); }
+.organization-dialog > header { align-items: flex-start; padding: 20px 20px 0; }
 .organization-dialog > header h2 { margin: 0 0 4px; }
-.organization-layout { border: 1px solid var(--line); display: grid; grid-template-columns: minmax(250px, .82fr) minmax(0, 1.7fr); margin-top: 18px; min-height: 480px; }
-.organization-tree-panel { background: #f7fbfa; border-right: 1px solid var(--line); padding: 14px; }
-.organization-members-panel { min-width: 0; padding: 16px; }
+.organization-dialog > footer { margin-top: 0; padding: 18px 20px 20px; }
+.organization-layout { border: 1px solid var(--line); display: grid; grid-template-columns: minmax(250px, .82fr) minmax(0, 1.7fr); margin: 18px 20px 0; min-height: 480px; }
+.organization-tree-panel { background: #f7fbfa; border-right: 1px solid var(--line); padding: 20px; }
+.organization-members-panel { min-width: 0; padding: 20px; }
 .organization-panel-head { align-items: center; display: flex; gap: 12px; justify-content: space-between; margin-bottom: 13px; }
 .organization-panel-head strong { font-size: 14px; }
 .organization-panel-head .sub { display: block; font-size: 12px; margin-top: 3px; }
 .organization-panel-actions { align-items: center; display: flex; gap: 12px; }
+.organization-invite-tools { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 12px; padding: 14px 0; }
+.organization-invite-tools input { border: 1px solid var(--line); border-radius: 5px; font: inherit; height: 36px; min-width: 250px; padding: 0 10px; }
+.organization-invite-tools .sub { margin-left: auto; white-space: nowrap; }
+.organization-search-results { border-top: 1px solid var(--line); margin-bottom: 12px; max-height: 242px; overflow: auto; }
 .organization-tree { display: grid; gap: 2px; max-height: 510px; overflow: auto; }
 .organization-tree-node { display: grid; gap: 2px; }
 .organization-unit-button { align-items: center; background: transparent; border: 0; border-radius: 4px; color: var(--ink); cursor: pointer; display: grid; font: inherit; gap: 7px; grid-template-columns: 13px 1fr auto; min-height: 34px; padding: 6px 8px 6px calc(8px + var(--tree-depth) * 18px); text-align: left; width: 100%; }
@@ -181,12 +186,13 @@ a.nav-item { text-decoration: none; }
 .organization-person-row .badge { color: #4c6667; justify-self: end; }
 .organization-person-row .badge.v3 { color: var(--teal); }
 .organization-person-row .badge.v0 { color: #8d5d25; }
-.organization-binding-dialog { width: min(820px, calc(100vw - 28px)); }
-.organization-binding-dialog > header { align-items: flex-start; }
+.organization-binding-dialog { width: min(820px, calc(100vw - 40px)); }
+.organization-binding-dialog > header { align-items: flex-start; padding: 20px 20px 0; }
 .organization-binding-dialog h2 { margin: 0 0 4px; }
-.organization-binding-summary { align-items: center; background: var(--teal-soft); border: 1px solid #c7e2de; color: #24464a; display: flex; font-size: 12px; gap: 12px; justify-content: space-between; margin-top: 16px; padding: 11px 12px; }
+.organization-binding-dialog > footer { margin-top: 0; padding: 18px 20px 20px; }
+.organization-binding-summary { align-items: center; background: var(--teal-soft); border: 1px solid #c7e2de; color: #24464a; display: flex; font-size: 12px; gap: 12px; justify-content: space-between; margin: 16px 20px 0; padding: 11px 12px; }
 .organization-binding-summary strong { color: var(--teal); font-size: 13px; }
-.organization-binding-list { border-top: 1px solid var(--line); margin-top: 14px; max-height: min(52vh, 480px); overflow: auto; }
+.organization-binding-list { border-top: 1px solid var(--line); margin: 14px 20px 0; max-height: min(52vh, 480px); overflow: auto; }
 .organization-binding-row { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 14px; justify-content: space-between; padding: 12px 2px; }
 .organization-binding-row > div { display: grid; gap: 3px; min-width: 0; }
 .organization-binding-row strong { font-size: 13px; }
