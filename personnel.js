@@ -11,7 +11,8 @@ function permissions() {
     <article class="card table-wrap"><table class="table permission-table"><thead><tr><th>账号</th><th>品牌 / 部门</th><th>当前角色</th><th>绑定伙伴</th><th>状态</th><th></th></tr></thead><tbody id="profile-body"><tr><td colspan="6" class="empty">正在加载账号...</td></tr></tbody></table></article>
     <dialog id="partner-picker-dialog" class="dialog"><form method="dialog"><header><h2>选择绑定伙伴</h2><button class="icon-button" value="cancel" aria-label="关闭">x</button></header><div class="toolbar partner-picker-tools"><select id="partner-picker-brand"><option value="">全部品牌</option></select><input id="partner-picker-search" placeholder="搜索姓名或部门" /><span class="sub" id="partner-picker-count"></span></div><div class="partner-picker-list" id="partner-picker-list"></div><footer><button value="cancel" class="button secondary">取消</button></footer></form></dialog>
     <dialog id="person-dialog" class="dialog"><form id="person-form"><header><h2>新增人员并发送邀请</h2><button class="icon-button" type="button" data-close-person aria-label="关闭">x</button></header><p class="sub">系统会创建账号、设置角色和绑定关系，再发送“设置密码”邮件。</p><div class="form-grid"><label>姓名<input id="person-name" required maxlength="40" placeholder="例如：曹沁" /></label><label>公司邮箱<input id="person-email" required type="email" placeholder="name@dfwsgroup.com" /></label><label>角色<select id="person-role">${roles.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><label>伙伴档案<select id="person-bind-mode"><option value="existing">绑定已有伙伴记录</option><option value="new">新建伙伴记录并绑定</option><option value="none">暂不绑定伙伴记录</option></select></label></div><div id="person-existing" class="personnel-existing"><label class="sub" for="person-partner">选择已有伙伴</label><select id="person-partner"></select></div><div id="person-new" class="form-grid" hidden><label>品牌<select id="person-brand"></select></label><label>部门<input id="person-department" placeholder="例如：新闻部" /></label></div><p class="personnel-form-note" id="person-form-note">创建后会立即发送设置密码邮件。伙伴角色绑定成功后，只能查看和提交自己的数据。</p><footer><button class="button secondary" type="button" data-close-person>取消</button><button class="button primary" id="person-submit" type="submit">创建并发送邀请</button></footer></form></dialog>
-    <dialog id="organization-dialog" class="dialog organization-dialog"><header><div><h2>组织通讯录</h2><p class="sub">部门和人员在系统内维护。选择一个部门后可先预览，再向未开通的伙伴发送邀请。</p></div><button class="icon-button" type="button" data-close-organization aria-label="关闭">x</button></header><div class="organization-layout"><section class="organization-tree-panel"><div class="organization-panel-head"><strong>组织架构</strong><button class="action-link" type="button" id="add-organization-unit">新增部门</button></div><div class="organization-tree" id="organization-tree"><div class="empty">正在读取组织通讯录...</div></div></section><section class="organization-members-panel"><div class="organization-panel-head"><div><strong id="organization-unit-title">选择部门</strong><span class="sub" id="organization-unit-summary"></span></div><div class="organization-panel-actions"><button class="action-link" type="button" id="add-organization-person">新增人员</button><button class="button primary" type="button" id="invite-organization-unit" disabled>预览并发送邀请</button></div></div><div class="organization-member-list" id="organization-member-list"><div class="empty">请选择左侧部门查看人员。</div></div></section></div><footer><button class="button secondary" type="button" data-close-organization>关闭</button></footer></dialog>
+    <dialog id="organization-dialog" class="dialog organization-dialog"><header><div><h2>组织通讯录</h2><p class="sub">部门和人员在系统内维护。选择一个部门后可先预览，再向未开通的伙伴发送邀请。</p></div><button class="icon-button" type="button" data-close-organization aria-label="关闭">x</button></header><div class="organization-layout"><section class="organization-tree-panel"><div class="organization-panel-head"><strong>组织架构</strong><button class="action-link" type="button" id="add-organization-unit">新增部门</button></div><div class="organization-tree" id="organization-tree"><div class="empty">正在读取组织通讯录...</div></div></section><section class="organization-members-panel"><div class="organization-panel-head"><div><strong id="organization-unit-title">选择部门</strong><span class="sub" id="organization-unit-summary"></span></div><div class="organization-panel-actions"><button class="action-link" type="button" id="add-organization-person">新增人员</button><button class="button secondary" type="button" id="resolve-organization-unit" disabled>处理待绑定</button><button class="button primary" type="button" id="invite-organization-unit" disabled>预览并发送邀请</button></div></div><div class="organization-member-list" id="organization-member-list"><div class="empty">请选择左侧部门查看人员。</div></div></section></div><footer><button class="button secondary" type="button" data-close-organization>关闭</button></footer></dialog>
+    <dialog id="organization-binding-dialog" class="dialog organization-binding-dialog"><header><div><h2>处理待绑定人员</h2><p class="sub">仅补齐伙伴档案关系，不创建账号、不发送邮件。人工确认项默认不处理。</p></div><button class="icon-button" type="button" data-close-organization-binding aria-label="关闭">x</button></header><div id="organization-binding-summary" class="organization-binding-summary"></div><div id="organization-binding-list" class="organization-binding-list"></div><footer><button class="button secondary" type="button" data-close-organization-binding>取消</button><button class="button primary" type="button" id="apply-organization-bindings" disabled>确认处理</button></footer></dialog>
     <dialog id="organization-unit-dialog" class="dialog"><form id="organization-unit-form"><header><h2>新增部门</h2><button class="icon-button" type="button" data-close-organization-unit aria-label="关闭">x</button></header><div class="form-grid"><label>部门名称<input id="organization-unit-name" required maxlength="60" /></label><label>上级部门<select id="organization-unit-parent"><option value="">作为一级部门</option></select></label><label>所属品牌（选填）<select id="organization-unit-brand"><option value="">未设置</option><option>迈点</option><option>最佳东方</option><option>乔邦</option><option>先之</option><option>技术中心</option><option>职能</option></select></label></div><footer><button class="button secondary" type="button" data-close-organization-unit>取消</button><button class="button primary" type="submit">保存部门</button></footer></form></dialog>
     <dialog id="organization-person-dialog" class="dialog"><form id="organization-person-form"><header><h2>新增通讯录人员</h2><button class="icon-button" type="button" data-close-organization-person aria-label="关闭">x</button></header><p class="sub">只有已绑定伙伴档案的人员才会进入邀请预览，避免误创建或覆盖历史数据。</p><div class="form-grid"><label>姓名<input id="organization-person-name" required maxlength="40" /></label><label>公司邮箱<input id="organization-person-email" required type="email" /></label><label class="full">归属部门（可多选）<select id="organization-person-units" multiple size="7"></select></label><label class="full">绑定已有伙伴档案<select id="organization-person-partner"><option value="">暂不绑定</option></select></label></div><footer><button class="button secondary" type="button" data-close-organization-person>取消</button><button class="button primary" type="submit">保存人员</button></footer></form></dialog>`;
 
@@ -19,6 +20,7 @@ function permissions() {
   let pickerProfileId = null;
   let organization = null;
   let selectedOrganizationUnitId = null;
+  let organizationBindingPlans = [];
   const partnerOption = (partner) => `<option value="${esc(partner.id)}">${esc(partner.owner_name)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`;
   const orgUnitLabel = (unit) => `${unit.name}${unit.brand ? ` · ${unit.brand}` : ''}`;
   const organizationMembersFor = (unitId, includeChildren = true) => {
@@ -36,6 +38,40 @@ function permissions() {
     if (!person.partner_id) return ['待绑定', '请先绑定伙伴档案'];
     const bound = (organization?.profiles || []).some((profile) => profile.partner_id === person.partner_id);
     return bound ? ['已开通', '伙伴已绑定账号'] : ['可邀请', '将发送设置密码邮件'];
+  };
+  const normalizedName = (value) => String(value || '').trim().split(/\s*[-－—]\s*/)[0].trim();
+  const organizationUnitIdsFor = (unitId) => {
+    const ids = new Set([unitId]);
+    let changed = true;
+    while (changed) { changed = false; (organization?.units || []).forEach((unit) => { if (unit.parent_id && ids.has(unit.parent_id) && !ids.has(unit.id)) { ids.add(unit.id); changed = true; } }); }
+    return ids;
+  };
+  const bindingPlansFor = (unitId) => {
+    const targetUnitIds = organizationUnitIdsFor(unitId);
+    return organizationMembersFor(unitId).filter((person) => !person.partner_id).map((person) => {
+      const personUnitIds = new Set((organization?.memberships || []).filter((membership) => membership.person_id === person.id).map((membership) => membership.unit_id));
+      const units = (organization?.units || []).filter((unit) => personUnitIds.has(unit.id));
+      const selectedUnit = units.find((unit) => targetUnitIds.has(unit.id)) || units[0] || (organization?.units || []).find((unit) => unit.id === unitId);
+      const brands = new Set(units.map((unit) => unit.brand).filter(Boolean));
+      const allCandidates = (organization?.partners || []).filter((partner) => normalizedName(partner.owner_name) === normalizedName(person.display_name));
+      const sameBrand = allCandidates.filter((partner) => brands.has(partner.brand));
+      if (sameBrand.length === 1) return { person, kind: 'auto', partner: sameBrand[0] };
+      if (!allCandidates.length) return { person, kind: 'new', brand: selectedUnit?.brand || '职能', department: selectedUnit?.name || '未分配部门' };
+      return { person, kind: 'confirm', candidates: allCandidates };
+    });
+  };
+  const renderBindingPlans = () => {
+    const automatic = organizationBindingPlans.filter((plan) => plan.kind === 'auto');
+    const created = organizationBindingPlans.filter((plan) => plan.kind === 'new');
+    const confirmations = organizationBindingPlans.filter((plan) => plan.kind === 'confirm');
+    $('#organization-binding-summary').innerHTML = `<strong>待处理 ${organizationBindingPlans.length} 人</strong><span>自动绑定 ${automatic.length} 人 · 新建伙伴并绑定 ${created.length} 人 · 需人工确认 ${confirmations.length} 人</span>`;
+    $('#organization-binding-list').innerHTML = organizationBindingPlans.map((plan) => {
+      const person = plan.person;
+      if (plan.kind === 'auto') return `<article class="organization-binding-row"><div><strong>${esc(person.display_name)}</strong><span>${esc(person.email)}</span></div><div><b class="binding-kind auto">自动绑定</b><small>${esc(`${plan.partner.owner_name} · ${plan.partner.brand} · ${plan.partner.department}`)}</small></div></article>`;
+      if (plan.kind === 'new') return `<article class="organization-binding-row"><div><strong>${esc(person.display_name)}</strong><span>${esc(person.email)}</span></div><div><b class="binding-kind create">新建伙伴</b><small>${esc(`${plan.brand} · ${plan.department}`)}</small></div></article>`;
+      return `<article class="organization-binding-row"><div><strong>${esc(person.display_name)}</strong><span>${esc(person.email)}</span></div><label class="binding-candidate"><b class="binding-kind confirm">人工确认</b><select data-binding-candidate="${person.id}"><option value="">暂不处理</option>${plan.candidates.map((partner) => `<option value="${partner.id}">${esc(`${partner.owner_name} · ${partner.brand} · ${partner.department}`)}</option>`).join('')}</select></label></article>`;
+    }).join('') || '<div class="empty">该部门没有待绑定人员。</div>';
+    $('#apply-organization-bindings').disabled = organizationBindingPlans.length === 0;
   };
   const renderOrganization = () => {
     const units = organization?.units || [];
@@ -55,6 +91,7 @@ function permissions() {
     $('#organization-unit-title').textContent = unit ? unit.name : '选择部门';
     $('#organization-unit-summary').textContent = unit ? `含下级部门共 ${people.length} 人` : '';
     $('#invite-organization-unit').disabled = !people.length;
+    $('#resolve-organization-unit').disabled = !people.some((person) => !person.partner_id);
     $('#organization-member-list').innerHTML = unit ? people.map((person) => { const [state, note] = organizationStatus(person); return `<article class="organization-person-row"><div><strong>${esc(person.display_name)}</strong><span>${esc(person.email)}</span></div><div><span class="badge ${state === '可邀请' ? 'v3' : state === '待绑定' ? 'v0' : ''}">${state}</span><small>${esc(note)}</small></div></article>`; }).join('') || '<div class="empty">该部门及下级部门暂无人员。</div>' : '<div class="empty">请选择左侧部门查看人员。</div>';
   };
   const loadOrganization = async () => { organization = await window.DfwsCloud.organizationDirectory(); renderOrganization(); };
@@ -151,6 +188,7 @@ function permissions() {
   $$('[data-close-organization]').forEach((button) => button.onclick = () => $('#organization-dialog').close());
   $$('[data-close-organization-unit]').forEach((button) => button.onclick = () => $('#organization-unit-dialog').close());
   $$('[data-close-organization-person]').forEach((button) => button.onclick = () => $('#organization-person-dialog').close());
+  $$('[data-close-organization-binding]').forEach((button) => button.onclick = () => $('#organization-binding-dialog').close());
   $('#organization-tree').onclick = (event) => {
     const unitId = event.target.closest('[data-organization-unit]')?.dataset.organizationUnit;
     if (!unitId) return;
@@ -171,6 +209,29 @@ function permissions() {
       await window.DfwsCloud.saveOrganizationDirectory({ action: 'save_person', displayName: $('#organization-person-name').value.trim(), email: $('#organization-person-email').value.trim(), partnerId: $('#organization-person-partner').value, unitIds: [...$('#organization-person-units').selectedOptions].map((item) => item.value) });
       $('#organization-person-dialog').close(); await loadOrganization(); toast('人员已加入组织通讯录');
     } catch (error) { toast(error.message || '人员保存失败'); }
+  };
+  $('#resolve-organization-unit').onclick = () => {
+    organizationBindingPlans = bindingPlansFor(selectedOrganizationUnitId);
+    renderBindingPlans();
+    $('#organization-binding-dialog').showModal();
+  };
+  $('#apply-organization-bindings').onclick = async () => {
+    const decisions = organizationBindingPlans.flatMap((plan) => {
+      if (plan.kind === 'auto') return [{ personId: plan.person.id, mode: 'bind_existing', partnerId: plan.partner.id }];
+      if (plan.kind === 'new') return [{ personId: plan.person.id, mode: 'create_partner', brand: plan.brand, department: plan.department }];
+      const partnerId = $(`[data-binding-candidate="${plan.person.id}"]`)?.value;
+      return partnerId ? [{ personId: plan.person.id, mode: 'bind_existing', partnerId }] : [];
+    });
+    if (!decisions.length) { toast('请至少选择一位人员处理。'); return; }
+    if (!confirm(`确认补齐 ${decisions.length} 位人员的伙伴绑定？本操作不创建账号，也不会发送邮件。`)) return;
+    const button = $('#apply-organization-bindings');
+    try {
+      button.disabled = true; button.textContent = '正在处理...';
+      const result = await window.DfwsCloud.saveOrganizationDirectory({ action: 'apply_binding_decisions', decisions });
+      toast(`绑定完成：成功 ${result.bound} 人，跳过 ${result.skipped} 人，失败 ${result.failed} 人`);
+      $('#organization-binding-dialog').close(); await Promise.all([loadOrganization(), load()]);
+    } catch (error) { toast(error.message || '伙伴绑定处理失败'); }
+    finally { button.textContent = '确认处理'; }
   };
   $('#invite-organization-unit').onclick = async () => {
     const people = organizationMembersFor(selectedOrganizationUnitId).filter((person) => organizationStatus(person)[0] === '可邀请');
