@@ -156,6 +156,12 @@ a.nav-item { text-decoration: none; }
 .personnel-existing { display: grid; gap: 7px; margin-top: 14px; }
 .personnel-existing select { border: 1px solid var(--line); border-radius: 5px; font: inherit; height: 38px; padding: 0 9px; width: 100%; }
 .form-grid[hidden], .personnel-existing[hidden] { display: none !important; }
+.batch-invite-dialog { width: min(1040px, calc(100vw - 28px)); }
+.batch-invite-dialog select[multiple] { height: 184px; padding: 6px; }
+.batch-invite-actions { align-items: center; display: flex; gap: 10px; margin-top: 14px; }
+.batch-invite-summary { background: var(--teal-soft); border: 1px solid #c7e2de; border-radius: 5px; color: #24464a; margin-top: 14px; padding: 10px 12px; }
+.batch-invite-table-wrap { margin-top: 14px; max-height: 380px; }
+.batch-invite-table-wrap .table { min-width: 820px; }
 .skill-library-summary { align-items: center; background: var(--teal-soft); border: 1px solid #c7e2de; border-radius: 6px; display: flex; gap: 18px; justify-content: space-between; margin-bottom: 16px; padding: 12px 14px; }
 .skill-library-summary strong { color: var(--teal); font-size: 20px; }
 .skill-summary-filter { background: transparent; border: 0; color: inherit; cursor: pointer; font: inherit; padding: 0; text-align: left; }

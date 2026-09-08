@@ -224,6 +224,24 @@
     if (!response.ok) throw new Error(result.error || '新增人员失败');
     return result;
   }
+  async function batchInviteMembers(records) {
+    requireWritable();
+    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+      throw new Error('本地预览不发送邀请邮件，请使用 dfws.wendywang.club 的管理端操作。');
+    }
+    if (!Array.isArray(records) || !records.length) throw new Error('没有可开通的人员。');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/batch-invite-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ records })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '批量开通失败');
+    return result;
+  }
   async function sendPasswordSetupEmail(profileId) {
     requireWritable();
     if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
@@ -519,5 +537,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, batchInviteMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();
