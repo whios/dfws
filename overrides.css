@@ -193,11 +193,16 @@ a.nav-item { text-decoration: none; }
 .organization-binding-summary { align-items: center; background: var(--teal-soft); border: 1px solid #c7e2de; color: #24464a; display: flex; font-size: 12px; gap: 12px; justify-content: space-between; margin: 16px 20px 0; padding: 11px 12px; }
 .organization-binding-summary strong { color: var(--teal); font-size: 13px; }
 .organization-binding-list { border-top: 1px solid var(--line); margin: 14px 20px 0; max-height: min(52vh, 480px); overflow: auto; }
+.organization-binding-result { background: var(--red-soft); border: 1px solid #f4c9c4; color: #74342d; margin: 14px 20px 0; padding: 12px; }
+.organization-binding-result strong { display: block; font-size: 13px; }
+.organization-binding-result p { display: grid; gap: 2px; margin: 8px 0 0; }
+.organization-binding-result p span { font-size: 12px; overflow-wrap: anywhere; }
 .organization-binding-row { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 14px; justify-content: space-between; padding: 12px 2px; }
 .organization-binding-row > div { display: grid; gap: 3px; min-width: 0; }
 .organization-binding-row strong { font-size: 13px; }
 .organization-binding-row span, .organization-binding-row small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .organization-binding-row > div:last-child { justify-items: end; text-align: right; }
+#toast { max-width: min(720px, calc(100vw - 40px)); overflow-wrap: anywhere; white-space: normal; z-index: 1000; }
 .binding-kind { border-radius: 10px; font-size: 11px; font-weight: 700; padding: 3px 7px; }
 .binding-kind.auto { background: #e1f1ee; color: #17665c; }
 .binding-kind.create { background: #e6f0fb; color: #205d9d; }
