@@ -203,8 +203,16 @@
   async function updateProfile(id, values) {
     requireWritable();
     if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
-    const { error } = await client.from('profiles').update(values).eq('id', id);
-    if (error) throw error;
+    if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不保存人员权限，请使用正式管理端操作。');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ profileId: id, role: values.role, partnerId: values.partner_id || null })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.profile?.id) throw new Error(result.error || '账号未更新，请刷新后重试。');
+    return result.profile;
   }
   async function deleteAsset(id) {
     requireWritable();

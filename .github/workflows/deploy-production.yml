@@ -32,6 +32,7 @@ jobs:
           node --check api/staff/invite-organization-members.js
           node --check api/staff/send-password-setup-email.js
           node --check api/staff/send-skill-review-email.js
+          node --check api/staff/update-profile.js
 
       - name: Package application files
         uses: actions/upload-artifact@v4

@@ -141,8 +141,11 @@ a.nav-item { text-decoration: none; }
 .permission-kpi span, .permission-kpi small { color: var(--muted); font-size: 12px; }
 .permission-kpi strong { font-size: 27px; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .permission-table select { max-width: 280px; }
+.permission-table th:nth-child(4), .permission-table td:nth-child(4) { min-width: 260px; }
+.permission-table th:last-child, .permission-table td:last-child { min-width: 150px; }
 .partner-binding { display: block; font-weight: 650; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.partner-binding-actions { display: flex; gap: 10px; margin-top: 5px; }
+.partner-binding-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 7px; }
+.permission-save { font-size: 12px; padding: 5px 9px; }
 .muted-action { color: var(--muted); font-weight: 500; }
 .partner-picker-tools { border-bottom: 1px solid var(--line); margin: 16px 0 0; padding-bottom: 14px; }
 .partner-picker-tools input { flex: 1; min-width: 220px; }
