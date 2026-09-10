@@ -9,6 +9,7 @@ import organizationDirectory from './api/staff/organization-directory.js';
 import inviteOrganizationMembers from './api/staff/invite-organization-members.js';
 import sendPasswordSetupEmail from './api/staff/send-password-setup-email.js';
 import sendSkillReviewEmail from './api/staff/send-skill-review-email.js';
+import updateProfile from './api/staff/update-profile.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -19,7 +20,8 @@ const apiHandlers = new Map([
   ['/api/staff/organization-directory', organizationDirectory],
   ['/api/staff/invite-organization-members', inviteOrganizationMembers],
   ['/api/staff/send-password-setup-email', sendPasswordSetupEmail],
-  ['/api/staff/send-skill-review-email', sendSkillReviewEmail]
+  ['/api/staff/send-skill-review-email', sendSkillReviewEmail],
+  ['/api/staff/update-profile', updateProfile]
 ]);
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
