@@ -3,6 +3,8 @@ function skills() {
   const view = $('#skills');
   if (!window.DfwsCloud?.staff()) { view.innerHTML = '<div class="empty">仅 AI 应用官、负责人和品牌管理员可审核成果并查看下载明细。</div>'; return; }
   const statusOptions = [['pending', '待审核'], ['published', '已发布并入账'], ['rejected', '退回修改'], ['archived', '已下架']];
+  const hasBrandScope = Boolean(window.DfwsCloud?.brandAdmin?.());
+  const scopedBrand = hasBrandScope ? window.DfwsCloud.managementBrand?.() : '';
   const statusName = new Map(statusOptions);
   const visibilityLabel = (scope, brand) => scope === 'brand_only' ? `仅限${brand || '本品牌'}伙伴可见` : '全体伙伴可见';
   let resources = [];
@@ -26,7 +28,7 @@ function skills() {
     const label = line.replace(url, '').replace(/[|｜：:－—-]+\s*$/, '').trim() || url;
     return `<a class="action-link" href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`;
   }).filter(Boolean).join('') || '<span class="sub">未填写</span>';
-  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">所有新成果在此提交；发布后自动写入资产台账。</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill">管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><article class="card reuse-ranking"><div class="section-head"><div><h2>成果复用榜</h2><p>按去重下载人数排序，下载仅代表获取文件，不等同于实际使用。</p></div><label class="sub">排行口径 <select id="reuse-ranking-mode"><option value="month">近 30 天最受复用</option><option value="total">累计下载最多</option><option value="recent">最近有新下载</option></select></label></div><div class="table-wrap"><table class="table"><thead><tr><th>排名</th><th>成果</th><th>归属伙伴</th><th>下载人数</th><th>下载次数</th><th>最近下载</th></tr></thead><tbody id="reuse-ranking-body"><tr><td colspan="6" class="empty">正在统计复用数据...</td></tr></tbody></table></div></article><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
+  view.innerHTML = `<div class="toolbar"><div><strong>成果审核</strong><div class="sub">${hasBrandScope ? (scopedBrand ? `当前仅可审核 ${esc(scopedBrand)} 品牌成果。` : '当前账号尚未绑定品牌，无法审核成果。') : '所有新成果在此提交；发布后自动写入资产台账。'}</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill" ${hasBrandScope && !scopedBrand ? 'disabled' : ''}>管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载审核和下载数据...</span></div><article class="card reuse-ranking"><div class="section-head"><div><h2>成果复用榜</h2><p>按去重下载人数排序，下载仅代表获取文件，不等同于实际使用。</p></div><label class="sub">排行口径 <select id="reuse-ranking-mode"><option value="month">近 30 天最受复用</option><option value="total">累计下载最多</option><option value="recent">最近有新下载</option></select></label></div><div class="table-wrap"><table class="table"><thead><tr><th>排名</th><th>成果</th><th>归属伙伴</th><th>下载人数</th><th>下载次数</th><th>最近下载</th></tr></thead><tbody id="reuse-ranking-body"><tr><td colspan="6" class="empty">正在统计复用数据...</td></tr></tbody></table></div></article><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card"><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载账号</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
   view.querySelector('.toolbar strong').textContent = '成果审核与发布';
   view.querySelector('#add-admin-skill').textContent = '管理员代提交成果';
   view.querySelectorAll('.toolbar')[1].setAttribute('aria-label', '成果审核与发布筛选');
@@ -108,13 +110,14 @@ function skills() {
       const [data, personnel] = await Promise.all([window.DfwsCloud.listSkillResources(true), window.DfwsCloud.listProfiles()]);
       const selectedBrand = initialFilters.brand ?? $('#skill-brand').value;
       const selectedStatus = initialFilters.status ?? $('#skill-review-type').value;
-      resources = data.resources;
+      resources = hasBrandScope ? data.resources.filter((resource) => resource.partners?.brand === scopedBrand) : data.resources;
       evaluationSummaries = await window.DfwsCloud.listSkillEvaluationCampaigns(resources).catch(() => []);
       partners = personnel.partners || [];
       downloads = data.downloads || [];
       const brands = [...new Set(resources.map((resource) => resource.partners?.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
       $('#skill-brand').innerHTML = `<option value="">全部品牌</option>${brands.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}`;
-      $('#skill-brand').value = brands.includes(selectedBrand) ? selectedBrand : '';
+      $('#skill-brand').value = scopedBrand && brands.includes(scopedBrand) ? scopedBrand : (brands.includes(selectedBrand) ? selectedBrand : '');
+      $('#skill-brand').disabled = hasBrandScope;
       $('#skill-review-type').value = statusOptions.some(([value]) => value === selectedStatus) ? selectedStatus : '';
       render();
       const titles = new Map(resources.map((resource) => [resource.id, resource.title]));

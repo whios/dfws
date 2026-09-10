@@ -152,6 +152,17 @@ function mailContent(status, resource) {
   };
 }
 
+async function staffScope(userId) {
+  const profiles = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role,partner_id`, { headers: serviceHeaders() });
+  const profile = profiles?.[0];
+  if (!staffRoles.has(profile?.role)) throw new Error('当前账号没有发送审核邮件的权限。');
+  if (profile.role !== 'brand_admin') return { global: true, brand: null };
+  if (!profile.partner_id) throw new Error('品牌管理员尚未绑定伙伴档案，无法确认品牌权限。');
+  const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(profile.partner_id)}&select=brand`, { headers: serviceHeaders() });
+  if (!partners?.[0]?.brand) throw new Error('品牌管理员未关联有效品牌，无法发送审核邮件。');
+  return { global: false, brand: partners[0].brand };
+}
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') return reply(response, 405, { error: '仅支持 POST 请求' });
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.SUPABASE_PUBLISHABLE_KEY) return reply(response, 503, { error: '审核邮件服务尚未完成安全配置。' });
@@ -163,15 +174,18 @@ export default async function handler(request, response) {
     const token = String(request.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!token) return reply(response, 401, { error: '请先登录后操作。' });
     const currentUser = await supabaseFetch('/auth/v1/user', { headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } });
-    const ownProfile = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}&select=role`, { headers: serviceHeaders() });
-    if (!staffRoles.has(ownProfile?.[0]?.role)) return reply(response, 403, { error: '当前账号没有发送审核邮件的权限。' });
+    const scope = await staffScope(currentUser.id);
 
     const { resourceId, status } = request.body || {};
     if (!uuidPattern.test(resourceId || '') || !reviewStatuses.has(status)) return reply(response, 400, { error: '成果或审核状态不合法。' });
 
-    const resources = await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}&select=id,title,status,review_note,uploaded_by`, { headers: serviceHeaders() });
+    const resources = await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}&select=id,title,status,review_note,uploaded_by,partner_id`, { headers: serviceHeaders() });
     const resource = resources?.[0];
     if (!resource || resource.status !== status || !resource.uploaded_by) return reply(response, 409, { error: '成果审核状态已变化，请刷新后重试。' });
+    if (!scope.global) {
+      const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(resource.partner_id)}&select=brand`, { headers: serviceHeaders() });
+      if (partners?.[0]?.brand !== scope.brand) return reply(response, 403, { error: '品牌管理员只能发送本品牌成果的审核通知。' });
+    }
 
     const kind = status === 'published' ? 'skill_published' : 'skill_rejected';
     const notices = await supabaseFetch(`/rest/v1/notifications?skill_resource_id=eq.${encodeURIComponent(resourceId)}&kind=eq.${kind}&email_sent_at=is.null&email_send_started_at=is.null&select=id&order=created_at.desc&limit=1`, { headers: serviceHeaders() });
