@@ -34,6 +34,8 @@
   const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id || '');
   const byPartner = (rows) => new Map(rows.map((row) => [`${row.owner_name}|${row.brand}`, row]));
   const staff = () => !readOnly && ['manager', 'brand_admin', 'ai_officer'].includes(profile?.role);
+  const brandAdmin = () => profile?.role === 'brand_admin';
+  const managementBrand = () => profile?.management_brand || null;
   const requireWritable = () => {
     if (localPreview) throw new Error('本地审核版只读取云端数据，禁止修改或发送通知。');
     if (readOnly) throw new Error('当前系统为云端只读模式，禁止写入。');
@@ -49,9 +51,10 @@
   const writeLocalList = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 
   async function getProfile(user) {
-    const { data, error } = await client.from('profiles').select('id, email, display_name, role, partner_id').eq('id', user.id).single();
+    const { data, error } = await client.from('profiles').select('id, email, display_name, role, partner_id, partners(brand)').eq('id', user.id).single();
     if (error) throw error;
-    profile = data;
+    const linkedPartner = Array.isArray(data.partners) ? data.partners[0] : data.partners;
+    profile = { ...data, management_brand: linkedPartner?.brand || null };
     const accountState = document.querySelector('#account-state');
     if (accountState) accountState.textContent = `${data.display_name || data.email} · ${roleLabel(data.role)}`;
     status('已连接云端');
@@ -64,13 +67,21 @@
       client.from('skill_resources').select('id, partner_id, status, created_at, partners(owner_name, brand, department)').order('created_at', { ascending: false })
     ]);
     for (const result of [partnersRes, assetsRes, risksRes, reviewsRes, resourcesRes]) if (result.error) throw result.error;
-    remoteHasData = partnersRes.data.length > 0;
+    const hasBrandScope = brandAdmin();
+    const scopedBrand = hasBrandScope ? managementBrand() : null;
+    const scopedPartnersData = hasBrandScope ? partnersRes.data.filter((item) => item.brand === scopedBrand) : partnersRes.data;
+    const scopedPartnerIds = new Set(scopedPartnersData.map((item) => item.id));
+    const scopedAssets = hasBrandScope ? assetsRes.data.filter((item) => item.brand === scopedBrand) : assetsRes.data;
+    const scopedRisks = hasBrandScope ? risksRes.data.filter((item) => item.brand === scopedBrand) : risksRes.data;
+    const scopedReviews = hasBrandScope ? reviewsRes.data.filter((item) => scopedPartnerIds.has(item.partner_id)) : reviewsRes.data;
+    const scopedResources = hasBrandScope ? resourcesRes.data.filter((item) => item.partners?.brand === scopedBrand) : resourcesRes.data;
+    remoteHasData = scopedPartnersData.length > 0;
     if (!remoteHasData) return null;
-    const partners = partnersRes.data.map((p) => ({ id: p.id, owner: p.owner_name, brand: p.brand, department: p.department }));
+    const partners = scopedPartnersData.map((p) => ({ id: p.id, owner: p.owner_name, brand: p.brand, department: p.department }));
     const reviews = {};
-    reviewsRes.data.forEach((r) => { const partner = partnersRes.data.find((p) => p.id === r.partner_id); if (partner) reviews[partner.owner_name] = { self: r.self_review, selfLevel: r.self_level, manager: r.manager_review, managerLevel: r.manager_level, officer: r.officer_review, officerLevel: r.officer_level }; });
+    scopedReviews.forEach((r) => { const partner = scopedPartnersData.find((p) => p.id === r.partner_id); if (partner) reviews[partner.owner_name] = { self: r.self_review, selfLevel: r.self_level, manager: r.manager_review, managerLevel: r.manager_level, officer: r.officer_review, officerLevel: r.officer_level }; });
     const publicationStatus = (status) => ({ pending: '待审核', published: '已发布', rejected: '退回修改', archived: '已下架' })[status] || '待审核';
-    return { partners, reviews, assets: assetsRes.data.map((a) => ({ id: a.id, resourceId: a.skill_resource_id || null, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.skill_resources?.status && a.verification_level === 'V0' ? 'V1' : a.verification_level, status: a.skill_resources?.status ? publicationStatus(a.skill_resources.status) : '补录资产', sourceStatus: a.skill_resources?.status || null, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: risksRes.data.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })), submissions: (resourcesRes.data || []).map((r) => ({ id: r.id, partnerId: r.partner_id, status: r.status, createdAt: r.created_at, owner: r.partners?.owner_name || '未关联伙伴', brand: r.partners?.brand || '未填写品牌', department: r.partners?.department || '未填写部门' })) };
+    return { partners, reviews, assets: scopedAssets.map((a) => ({ id: a.id, resourceId: a.skill_resource_id || null, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.skill_resources?.status && a.verification_level === 'V0' ? 'V1' : a.verification_level, status: a.skill_resources?.status ? publicationStatus(a.skill_resources.status) : '补录资产', sourceStatus: a.skill_resources?.status || null, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: scopedRisks.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })), submissions: scopedResources.map((r) => ({ id: r.id, partnerId: r.partner_id, status: r.status, createdAt: r.created_at, owner: r.partners?.owner_name || '未关联伙伴', brand: r.partners?.brand || '未填写品牌', department: r.partners?.department || '未填写部门' })) };
   }
 
   async function writeState(state) {
@@ -346,7 +357,9 @@
       const names = new Map(profilesRes.data.map((item) => [item.id, item.display_name || item.email]));
       downloads = downloadsRes.data.map((item) => ({ ...item, downloader: names.get(item.downloaded_by) || '未知账号' }));
     }
-    return { resources: resources || [], downloads };
+    const scopedResources = resources || [];
+    const resourceIds = new Set(scopedResources.map((resource) => resource.id));
+    return { resources: scopedResources, downloads: downloads.filter((item) => resourceIds.has(item.resource_id)) };
   }
   async function uploadSkill(partner, values, file) {
     requireWritable();
@@ -571,5 +584,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, brandAdmin, managementBrand, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();

@@ -18,6 +18,17 @@ function serviceHeaders() {
   return { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
 }
 
+async function staffScope(userId) {
+  const profiles = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role,partner_id`, { headers: serviceHeaders() });
+  const profile = profiles?.[0];
+  if (!staffRoles.has(profile?.role)) throw new Error('当前账号没有删除成果的权限。');
+  if (profile.role !== 'brand_admin') return { global: true, brand: null };
+  if (!profile.partner_id) throw new Error('品牌管理员尚未绑定伙伴档案，无法确认品牌权限。');
+  const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(profile.partner_id)}&select=brand`, { headers: serviceHeaders() });
+  if (!partners?.[0]?.brand) throw new Error('品牌管理员未关联有效品牌，无法删除成果。');
+  return { global: false, brand: partners[0].brand };
+}
+
 function storagePath(path) {
   return String(path || '').split('/').map(encodeURIComponent).join('/');
 }
@@ -33,14 +44,17 @@ export default async function handler(request, response) {
     const token = String(request.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!token) return reply(response, 401, { error: '请先登录后操作。' });
     const currentUser = await supabaseFetch('/auth/v1/user', { headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } });
-    const ownProfile = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}&select=role`, { headers: serviceHeaders() });
-    if (!staffRoles.has(ownProfile?.[0]?.role)) return reply(response, 403, { error: '当前账号没有删除成果的权限。' });
+    const scope = await staffScope(currentUser.id);
 
     const { resourceId } = request.body || {};
     if (!uuidPattern.test(resourceId || '')) return reply(response, 400, { error: '成果标识不合法。' });
-    const resources = await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}&select=id,file_path,description`, { headers: serviceHeaders() });
+    const resources = await supabaseFetch(`/rest/v1/skill_resources?id=eq.${encodeURIComponent(resourceId)}&select=id,file_path,description,partner_id`, { headers: serviceHeaders() });
     const resource = resources?.[0];
     if (!resource) return reply(response, 404, { error: '成果不存在或已被删除。' });
+    if (!scope.global) {
+      const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(resource.partner_id)}&select=brand`, { headers: serviceHeaders() });
+      if (partners?.[0]?.brand !== scope.brand) return reply(response, 403, { error: '品牌管理员只能删除本品牌成果。' });
+    }
 
     // 先移除下载明细，再删除成果；资产由数据库外键级联删除，通知保留为审核留痕。
     await supabaseFetch(`/rest/v1/skill_downloads?resource_id=eq.${encodeURIComponent(resourceId)}`, { method: 'DELETE', headers: serviceHeaders() });
