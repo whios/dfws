@@ -1,5 +1,5 @@
 const allowedRoles = new Set(['partner', 'manager', 'brand_admin', 'ai_officer', 'leader']);
-const staffRoles = new Set(['manager', 'brand_admin', 'ai_officer']);
+const staffRoles = new Set(['manager', 'ai_officer']);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 
 function reply(response, status, body) {
@@ -44,18 +44,9 @@ export default async function handler(request, response) {
 
     const target = await profileWithBrand(profileId);
     if (!target) return reply(response, 404, { error: '账号不存在或已删除。' });
-    let targetBrand = null;
     if (partnerId) {
       const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(partnerId)}&select=brand`, { headers: serviceHeaders() });
-      targetBrand = partners?.[0]?.brand || null;
-      if (!targetBrand) return reply(response, 400, { error: '所选伙伴档案不存在。' });
-    }
-
-    if (actor.role === 'brand_admin') {
-      if (!actor.brand) return reply(response, 403, { error: '品牌管理员尚未绑定品牌，无法维护人员。' });
-      if (role !== 'partner' || targetBrand !== actor.brand || (target.brand && target.brand !== actor.brand)) {
-        return reply(response, 403, { error: '品牌管理员只能绑定本品牌伙伴，且不能调整管理角色。' });
-      }
+      if (!partners?.[0]?.brand) return reply(response, 400, { error: '所选伙伴档案不存在。' });
     }
 
     const updated = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(profileId)}`, {

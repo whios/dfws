@@ -34,6 +34,7 @@
   const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id || '');
   const byPartner = (rows) => new Map(rows.map((row) => [`${row.owner_name}|${row.brand}`, row]));
   const staff = () => !readOnly && ['manager', 'brand_admin', 'ai_officer'].includes(profile?.role);
+  const personnelAdmin = () => !readOnly && ['manager', 'ai_officer'].includes(profile?.role);
   const brandAdmin = () => profile?.role === 'brand_admin';
   const managementBrand = () => profile?.management_brand || null;
   const requireWritable = () => {
@@ -55,6 +56,7 @@
     if (error) throw error;
     const linkedPartner = Array.isArray(data.partners) ? data.partners[0] : data.partners;
     profile = { ...data, management_brand: linkedPartner?.brand || null };
+    document.querySelector('[data-view="permissions"]')?.toggleAttribute('hidden', !personnelAdmin());
     const accountState = document.querySelector('#account-state');
     if (accountState) accountState.textContent = `${data.display_name || data.email} · ${roleLabel(data.role)}`;
     status('已连接云端');
@@ -194,7 +196,7 @@
   }
   function queueSync(state) { if (localPreview || readOnly || !remoteHasData || !staff()) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => writeState(state).catch((error) => { status('云端同步失败'); console.error(error); }), 600); }
   async function listProfiles() {
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     const [profilesRes, partnersRes] = await Promise.all([client.from('profiles').select('id, email, display_name, role, partner_id, created_at').order('created_at'), client.from('partners').select('id, owner_name, brand, department').order('brand').order('owner_name')]);
     if (profilesRes.error) throw profilesRes.error;
     if (partnersRes.error) throw partnersRes.error;
@@ -202,7 +204,7 @@
   }
   async function updateProfile(id, values) {
     requireWritable();
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不保存人员权限，请使用正式管理端操作。');
     const { data: { session } } = await client.auth.getSession();
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
@@ -228,7 +230,7 @@
   }
   async function inviteMember(values) {
     requireWritable();
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
       throw new Error('本地预览不发送邀请邮件，请使用 dfws.wendywang.club 的管理端操作。');
     }
@@ -245,7 +247,7 @@
   }
   async function batchInviteMembers(records) {
     requireWritable();
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
       throw new Error('本地预览不发送邀请邮件，请使用 dfws.wendywang.club 的管理端操作。');
     }
@@ -262,7 +264,7 @@
     return result;
   }
   async function organizationDirectory() {
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     const { data: { session } } = await client.auth.getSession();
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
     const response = await fetch('/api/staff/organization-directory', { headers: { Authorization: `Bearer ${session.access_token}` } });
@@ -272,7 +274,7 @@
   }
   async function saveOrganizationDirectory(values) {
     requireWritable();
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     const { data: { session } } = await client.auth.getSession();
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
     const response = await fetch('/api/staff/organization-directory', {
@@ -284,7 +286,7 @@
   }
   async function inviteOrganizationMembers(personIds) {
     requireWritable();
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不发送邀请邮件，请使用正式管理端操作。');
     const { data: { session } } = await client.auth.getSession();
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
@@ -297,7 +299,7 @@
   }
   async function sendPasswordSetupEmail(profileId) {
     requireWritable();
-    if (!staff()) throw new Error('当前账号没有人员权限管理权限。');
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
       throw new Error('本地预览不发送设置密码邮件，请使用 dfws.wendywang.club 的管理端操作。');
     }
@@ -592,5 +594,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, brandAdmin, managementBrand, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();

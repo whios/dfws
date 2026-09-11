@@ -1,7 +1,7 @@
 // 人员入口统一维护账号、角色与伙伴档案；创建登录账号由受保护的服务端接口执行。
 function permissions() {
   const view = $('#permissions');
-  if (!window.DfwsCloud?.staff()) { view.innerHTML = '<div class="empty">仅 AI 应用官、负责人和品牌管理员可管理人员权限。</div>'; return; }
+  if (!window.DfwsCloud?.personnelAdmin?.()) { view.innerHTML = '<div class="empty">仅 AI 应用官和负责人可以管理人员权限。</div>'; return; }
   const roles = [['partner', '伙伴'], ['manager', '负责人'], ['brand_admin', '品牌管理员'], ['ai_officer', 'AI 应用官'], ['leader', '领导只读']];
   const roleName = new Map(roles);
   view.innerHTML = `
