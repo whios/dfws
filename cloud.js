@@ -202,6 +202,19 @@
     if (partnersRes.error) throw partnersRes.error;
     return { profiles: profilesRes.data, partners: partnersRes.data };
   }
+  // 成果审核只需要成果归属信息，不能复用包含账号和绑定关系的人员权限接口。
+  async function listSkillPartners() {
+    if (!staff()) throw new Error('当前账号没有查看成果归属信息的权限。');
+    let query = client.from('partners').select('id, owner_name, brand, department').order('brand').order('owner_name');
+    if (brandAdmin()) {
+      const brand = managementBrand();
+      if (!brand) return [];
+      query = query.eq('brand', brand);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
   async function updateProfile(id, values) {
     requireWritable();
     if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
@@ -358,14 +371,10 @@
     if (error) throw error;
     let downloads = [];
     if (includeDownloads && staff()) {
-      const [downloadsRes, profilesRes] = await Promise.all([
-        client.from('skill_downloads').select('resource_id, downloaded_by, downloaded_at').order('downloaded_at', { ascending: false }),
-        client.from('profiles').select('id, email, display_name')
-      ]);
+      const downloadsRes = await client.from('skill_downloads').select('resource_id, downloaded_by, downloaded_at').order('downloaded_at', { ascending: false });
       if (downloadsRes.error) throw downloadsRes.error;
-      if (profilesRes.error) throw profilesRes.error;
-      const names = new Map(profilesRes.data.map((item) => [item.id, item.display_name || item.email]));
-      downloads = downloadsRes.data.map((item) => ({ ...item, downloader: names.get(item.downloaded_by) || '未知账号' }));
+      // 下载排行只依赖账号 ID 去重；审核页无需也不应读取账号资料。
+      downloads = (downloadsRes.data || []).map((item) => ({ ...item, downloader: '已登录伙伴' }));
     }
     const scopedResources = resources || [];
     const resourceIds = new Set(scopedResources.map((resource) => resource.id));
@@ -594,5 +603,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();

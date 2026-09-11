@@ -107,12 +107,12 @@ function skills() {
   };
   const load = async () => {
     try {
-      const [data, personnel] = await Promise.all([window.DfwsCloud.listSkillResources(true), window.DfwsCloud.listProfiles()]);
+      const [data, partnerRows] = await Promise.all([window.DfwsCloud.listSkillResources(true), window.DfwsCloud.listSkillPartners()]);
       const selectedBrand = initialFilters.brand ?? $('#skill-brand').value;
       const selectedStatus = initialFilters.status ?? $('#skill-review-type').value;
       resources = hasBrandScope ? data.resources.filter((resource) => resource.partners?.brand === scopedBrand) : data.resources;
       evaluationSummaries = await window.DfwsCloud.listSkillEvaluationCampaigns(resources).catch(() => []);
-      partners = personnel.partners || [];
+      partners = partnerRows || [];
       downloads = data.downloads || [];
       const brands = [...new Set(resources.map((resource) => resource.partners?.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
       $('#skill-brand').innerHTML = `<option value="">全部品牌</option>${brands.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}`;
