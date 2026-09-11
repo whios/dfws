@@ -215,6 +215,12 @@
     if (error) throw error;
     return data || [];
   }
+  async function listOperationAuditLogs() {
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以查看操作日志。');
+    const { data, error } = await client.rpc('list_operation_audit_logs', { max_rows: 100 });
+    if (error) throw error;
+    return data || [];
+  }
   async function updateProfile(id, values) {
     requireWritable();
     if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
@@ -603,5 +609,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();

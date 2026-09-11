@@ -9,6 +9,7 @@ function permissions() {
     <div id="permission-kpis" class="permission-kpis"></div>
     <div class="toolbar"><input id="profile-search" placeholder="搜索姓名、邮箱、品牌或部门" /><select id="profile-brand"><option value="">全部品牌</option></select><select id="profile-role"><option value="">全部角色</option></select><select id="profile-binding"><option value="">全部绑定状态</option><option value="bound">已绑定伙伴</option><option value="unbound">待绑定</option><option value="conflict">绑定冲突</option></select><span class="sub" id="profile-count"></span></div>
     <article class="card table-wrap"><table class="table permission-table"><thead><tr><th>账号</th><th>品牌 / 部门</th><th>当前角色</th><th>绑定伙伴与保存</th><th>状态</th><th>账户操作</th></tr></thead><tbody id="profile-body"><tr><td colspan="6" class="empty">正在加载账号...</td></tr></tbody></table></article>
+    <article class="card table-wrap operation-audit-card"><div class="section-head"><div><h2>操作日志</h2><p>记录成果审核、发布和下架的实际操作者；历史操作不会补写。</p></div><button class="button secondary" type="button" id="refresh-operation-audit">刷新日志</button></div><table class="table"><thead><tr><th>时间</th><th>操作</th><th>成果</th><th>品牌</th><th>操作人</th></tr></thead><tbody id="operation-audit-body"><tr><td colspan="5" class="empty">正在加载操作日志...</td></tr></tbody></table></article>
     <dialog id="partner-picker-dialog" class="dialog"><form method="dialog"><header><h2>选择绑定伙伴</h2><button class="icon-button" value="cancel" aria-label="关闭">x</button></header><div class="toolbar partner-picker-tools"><select id="partner-picker-brand"><option value="">全部品牌</option></select><input id="partner-picker-search" placeholder="搜索姓名或部门" /><span class="sub" id="partner-picker-count"></span></div><div class="partner-picker-list" id="partner-picker-list"></div><footer><button value="cancel" class="button secondary">取消</button></footer></form></dialog>
     <dialog id="person-dialog" class="dialog"><form id="person-form"><header><h2>新增人员并发送邀请</h2><button class="icon-button" type="button" data-close-person aria-label="关闭">x</button></header><p class="sub">系统会创建账号、设置角色和绑定关系，再发送“设置密码”邮件。</p><div class="form-grid"><label>姓名<input id="person-name" required maxlength="40" placeholder="例如：曹沁" /></label><label>公司邮箱<input id="person-email" required type="email" placeholder="name@dfwsgroup.com" /></label><label>角色<select id="person-role">${roles.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><label>伙伴档案<select id="person-bind-mode"><option value="existing">绑定已有伙伴记录</option><option value="new">新建伙伴记录并绑定</option><option value="none">暂不绑定伙伴记录</option></select></label></div><div id="person-existing" class="personnel-existing"><label class="sub" for="person-partner">选择已有伙伴</label><select id="person-partner"></select></div><div id="person-new" class="form-grid" hidden><label>品牌<select id="person-brand"></select></label><label>部门<input id="person-department" placeholder="例如：新闻部" /></label></div><p class="personnel-form-note" id="person-form-note">创建后会立即发送设置密码邮件。伙伴角色绑定成功后，只能查看和提交自己的数据。</p><footer><button class="button secondary" type="button" data-close-person>取消</button><button class="button primary" id="person-submit" type="submit">创建并发送邀请</button></footer></form></dialog>
     <dialog id="organization-dialog" class="dialog organization-dialog"><header><div><h2>组织通讯录</h2><p class="sub">从部门或姓名搜索中加入本次邀请名单，确认后才会发送设置密码邮件。</p></div><button class="icon-button" type="button" data-close-organization aria-label="关闭">x</button></header><div class="organization-layout"><section class="organization-tree-panel"><div class="organization-panel-head"><strong>组织架构</strong><button class="action-link" type="button" id="add-organization-unit">新增部门</button></div><div class="organization-tree" id="organization-tree"><div class="empty">正在读取组织通讯录...</div></div></section><section class="organization-members-panel"><div class="organization-panel-head"><div><strong id="organization-unit-title">选择部门</strong><span class="sub" id="organization-unit-summary"></span></div><div class="organization-panel-actions"><button class="action-link" type="button" id="add-organization-person">新增人员</button><button class="button secondary" type="button" id="resolve-organization-unit" disabled>处理待绑定</button><button class="button secondary" type="button" id="add-organization-unit-invites" disabled>加入本次邀请</button><button class="button primary" type="button" id="invite-organization-unit" disabled>预览并发送邀请</button></div></div><div class="organization-invite-tools"><input id="organization-invite-search" type="search" autocomplete="off" placeholder="搜索姓名或邮箱，加入本次邀请" /><span class="sub" id="organization-invite-summary">本次邀请 0 人</span></div><div class="organization-search-results" id="organization-search-results" hidden></div><div class="organization-member-list" id="organization-member-list"><div class="empty">请选择左侧部门查看人员。</div></div></section></div><footer><button class="button secondary" type="button" data-close-organization>关闭</button></footer></dialog>
@@ -22,6 +23,7 @@ function permissions() {
   let selectedOrganizationUnitId = null;
   let organizationBindingPlans = [];
   let organizationInvitationPersonIds = new Set();
+  let operationAuditLogs = [];
   const partnerOption = (partner) => `<option value="${esc(partner.id)}">${esc(partner.owner_name)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`;
   const orgUnitLabel = (unit) => `${unit.name}${unit.brand ? ` · ${unit.brand}` : ''}`;
   const organizationMembersFor = (unitId, includeChildren = true) => {
@@ -134,7 +136,15 @@ function permissions() {
   };
   const load = async () => {
     try {
-      data = await window.DfwsCloud.listProfiles();
+      const [profiles, auditResult] = await Promise.all([
+        window.DfwsCloud.listProfiles(),
+        window.DfwsCloud.listOperationAuditLogs().then((rows) => ({ rows })).catch((error) => ({ error }))
+      ]);
+      data = profiles;
+      operationAuditLogs = auditResult.rows || [];
+      $('#operation-audit-body').innerHTML = auditResult.error
+        ? `<tr><td colspan="5" class="empty">操作日志暂不可用：${esc(auditResult.error.message || '请先完成数据库升级')}</td></tr>`
+        : operationAuditLogs.map((log) => `<tr><td>${new Date(log.created_at).toLocaleString('zh-CN', { hour12: false })}</td><td><strong>${esc(log.action)}</strong></td><td>${esc(log.target_name)}</td><td>${esc(log.brand || '未填写')}</td><td>${esc(log.actor_name || '系统')}<br><span class="sub">${esc(roleName.get(log.actor_role) || '')}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty">暂无操作日志</td></tr>';
       const partnersById = new Map(data.partners.map((partner) => [partner.id, partner]));
       const bindingCounts = new Map();
       data.profiles.forEach((profile) => { if (profile.partner_id) bindingCounts.set(profile.partner_id, (bindingCounts.get(profile.partner_id) || 0) + 1); });
@@ -208,6 +218,7 @@ function permissions() {
     catch (error) { $('#organization-tree').innerHTML = `<div class="empty">${esc(error.message || '组织通讯录加载失败')}</div>`; }
   };
   $('#refresh-profiles').onclick = load;
+  $('#refresh-operation-audit').onclick = load;
   $('#person-bind-mode').onchange = setCreateMode;
   $('#person-partner').onchange = () => {
     const partner = data?.partners.find((item) => item.id === $('#person-partner').value);
