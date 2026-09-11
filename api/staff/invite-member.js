@@ -1,5 +1,5 @@
 const allowedRoles = new Set(['partner', 'manager', 'brand_admin', 'ai_officer', 'leader']);
-const staffRoles = new Set(['manager', 'brand_admin', 'ai_officer']);
+const staffRoles = new Set(['manager', 'ai_officer']);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function reply(response, status, body) {

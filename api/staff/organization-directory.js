@@ -1,4 +1,4 @@
-const staffRoles = new Set(['manager', 'brand_admin', 'ai_officer']);
+const staffRoles = new Set(['manager', 'ai_officer']);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 const allowedBrands = new Set(['迈点', '最佳东方', '乔邦', '先之', '技术中心', '职能']);
