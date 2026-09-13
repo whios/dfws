@@ -57,6 +57,8 @@
     const linkedPartner = Array.isArray(data.partners) ? data.partners[0] : data.partners;
     profile = { ...data, management_brand: linkedPartner?.brand || null };
     document.querySelector('[data-view="permissions"]')?.toggleAttribute('hidden', !personnelAdmin());
+    const skillsNav = document.querySelector('[data-view="skills"]');
+    if (skillsNav) skillsNav.textContent = data.role === 'leader' ? '成果进度总览' : '成果审核与发布';
     const accountState = document.querySelector('#account-state');
     if (accountState) accountState.textContent = `${data.display_name || data.email} · ${roleLabel(data.role)}`;
     status('已连接云端');
