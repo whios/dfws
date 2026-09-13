@@ -235,6 +235,20 @@
     if (!response.ok || !result.profile?.id) throw new Error(result.error || '账号未更新，请刷新后重试。');
     return result.profile;
   }
+  async function editPerson(id, displayName) {
+    requireWritable();
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以编辑人员信息。');
+    if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不保存人员信息，请使用正式管理端操作。');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/edit-person', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ profileId: id, displayName })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '人员信息未保存，请刷新后重试。');
+    return result;
+  }
   async function deleteAsset(id) {
     requireWritable();
     if (!staff()) throw new Error('当前账号没有删除云端台账的权限。');
@@ -609,5 +623,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();
