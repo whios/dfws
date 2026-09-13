@@ -11,6 +11,7 @@ import sendPasswordSetupEmail from './api/staff/send-password-setup-email.js';
 import sendSkillReviewEmail from './api/staff/send-skill-review-email.js';
 import updateProfile from './api/staff/update-profile.js';
 import editPerson from './api/staff/edit-person.js';
+import listSkillDownloads from './api/staff/list-skill-downloads.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -23,7 +24,8 @@ const apiHandlers = new Map([
   ['/api/staff/send-password-setup-email', sendPasswordSetupEmail],
   ['/api/staff/send-skill-review-email', sendSkillReviewEmail],
   ['/api/staff/update-profile', updateProfile],
-  ['/api/staff/edit-person', editPerson]
+  ['/api/staff/edit-person', editPerson],
+  ['/api/staff/list-skill-downloads', listSkillDownloads]
 ]);
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],

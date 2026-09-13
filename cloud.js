@@ -391,16 +391,19 @@
   async function listSkillResources(includeDownloads = false) {
     const { data: resources, error } = await client.from('skill_resources').select('*, partners(owner_name, brand, department)').order('created_at', { ascending: false });
     if (error) throw error;
-    let downloads = [];
-    if (includeDownloads && staff()) {
-      const downloadsRes = await client.from('skill_downloads').select('resource_id, downloaded_by, downloaded_at').order('downloaded_at', { ascending: false });
-      if (downloadsRes.error) throw downloadsRes.error;
-      // 下载排行只依赖账号 ID 去重；审核页无需也不应读取账号资料。
-      downloads = (downloadsRes.data || []).map((item) => ({ ...item, downloader: '已登录伙伴' }));
-    }
     const scopedResources = resources || [];
-    const resourceIds = new Set(scopedResources.map((resource) => resource.id));
-    return { resources: scopedResources, downloads: downloads.filter((item) => resourceIds.has(item.resource_id)) };
+    return { resources: scopedResources, downloads: [] };
+  }
+  async function listSkillDownloads() {
+    if (!['manager', 'brand_admin', 'ai_officer', 'leader'].includes(profile?.role)) throw new Error('当前账号没有查看下载明细的权限。');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/list-skill-downloads', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: '{}'
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '下载明细加载失败。');
+    return result.downloads || [];
   }
   async function uploadSkill(partner, values, file) {
     requireWritable();
@@ -625,5 +628,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, listSkillDownloads, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();
