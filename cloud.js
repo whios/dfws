@@ -586,21 +586,15 @@
     link.click();
     link.remove();
   }
-  async function reviewSkill(id, values) {
-    requireWritable();
-    if (!staff()) throw new Error('当前账号没有审核成果的权限。');
-    const { data: before, error: beforeError } = await client.from('skill_resources').select('status').eq('id', id).single();
-    if (beforeError) throw beforeError;
-    const { error } = await client.from('skill_resources').update({ status: values.status, review_note: values.reviewNote || null, updated_at: new Date().toISOString() }).eq('id', id);
-    if (error) throw error;
-    const sendsReviewEmail = before.status !== values.status && ['published', 'rejected'].includes(values.status);
+  async function sendReviewEmailIfNeeded(id, previousStatus, statusValue) {
+    const sendsReviewEmail = previousStatus !== statusValue && ['published', 'rejected'].includes(statusValue);
     if (!sendsReviewEmail) return { email: 'not_needed' };
     try {
       const { data: { session } } = await client.auth.getSession();
       const response = await fetch('/api/staff/send-skill-review-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({ resourceId: id, status: values.status })
+        body: JSON.stringify({ resourceId: id, status: statusValue })
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) return { email: 'failed', message: body.error || '审核邮件发送失败' };
@@ -608,6 +602,15 @@
     } catch (mailError) {
       return { email: 'failed', message: mailError.message || '审核邮件发送失败' };
     }
+  }
+  async function reviewSkill(id, values) {
+    requireWritable();
+    if (!staff()) throw new Error('当前账号没有审核成果的权限。');
+    const { data: before, error: beforeError } = await client.from('skill_resources').select('status').eq('id', id).single();
+    if (beforeError) throw beforeError;
+    const { error } = await client.from('skill_resources').update({ status: values.status, review_note: values.reviewNote || null, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    return sendReviewEmailIfNeeded(id, before.status, values.status);
   }
   async function deleteSkillResource(id) {
     requireWritable();
@@ -625,8 +628,11 @@
   async function editSkill(id, values) {
     requireWritable();
     if (!staff()) throw new Error('当前账号没有编辑成果的权限。');
-    const { error } = await client.from('skill_resources').update({ title: values.title, description: values.description, updated_at: new Date().toISOString() }).eq('id', id);
+    const { data: before, error: beforeError } = await client.from('skill_resources').select('status').eq('id', id).single();
+    if (beforeError) throw beforeError;
+    const { error } = await client.from('skill_resources').update({ title: values.title, description: values.description, status: values.status, review_note: values.reviewNote || null, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
+    return sendReviewEmailIfNeeded(id, before.status, values.status);
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
