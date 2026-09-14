@@ -239,7 +239,7 @@
     if (!response.ok || !result.profile?.id) throw new Error(result.error || '账号未更新，请刷新后重试。');
     return result.profile;
   }
-  async function editPerson(id, displayName) {
+  async function editPerson(id, values) {
     requireWritable();
     if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以编辑人员信息。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不保存人员信息，请使用正式管理端操作。');
@@ -247,7 +247,7 @@
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
     const response = await fetch('/api/staff/edit-person', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ profileId: id, displayName })
+      body: JSON.stringify({ profileId: id, displayName: values.displayName, brand: values.brand || null })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || '人员信息未保存，请刷新后重试。');
