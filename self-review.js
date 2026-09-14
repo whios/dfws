@@ -154,16 +154,33 @@
     const openIndex = blocks.findIndex((block) => block.open);
     document.querySelectorAll('.submission-steps span').forEach((step, index) => step.classList.toggle('active', index === (openIndex < 0 ? 0 : openIndex)));
   }
-  function showSubmissionError(message, field) {
-    const block = field?.closest('.form-accordion');
-    if (block) {
-      block.open = true;
-      syncSubmissionSteps();
-      requestAnimationFrame(() => field.focus({ preventScroll: true }));
-      block.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    $('#form-message').textContent = message;
+  function clearSubmissionValidation() {
+    document.querySelectorAll('#self-review-form [aria-invalid="true"]').forEach((field) => field.removeAttribute('aria-invalid'));
+    document.querySelectorAll('#self-review-form .form-validation-invalid').forEach((field) => field.classList.remove('form-validation-invalid'));
+    const summary = $('#submission-validation');
+    summary.hidden = true;
+    summary.innerHTML = '';
+  }
+  function showSubmissionIssues(issues) {
+    clearSubmissionValidation();
+    const summary = $('#submission-validation');
+    issues.forEach(({ field, group }) => {
+      const target = group || field;
+      target?.classList.add('form-validation-invalid');
+      if (field) field.setAttribute('aria-invalid', 'true');
+      const block = target?.closest('.form-accordion');
+      if (block) block.open = true;
+    });
+    syncSubmissionSteps();
+    summary.innerHTML = `<strong>还有 ${issues.length} 项需要完善</strong><ul>${issues.map((issue) => `<li>${esc(issue.message)}</li>`).join('')}</ul>`;
+    summary.hidden = false;
+    $('#form-message').textContent = '请根据上方提示补充信息后再提交。';
     setStatus('请补充提交信息');
+    const first = issues[0]?.field || issues[0]?.group;
+    requestAnimationFrame(() => {
+      first?.focus?.({ preventScroll: true });
+      summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
   }
   function renderSubmissions(data, campaigns = evaluationCampaigns) {
     const profile = window.DfwsCloud.profile;
@@ -344,8 +361,9 @@
   };
   $('#skill-effect-other-toggle').addEventListener('change', syncOtherEffectField);
   document.querySelectorAll('#self-review-form input:not([type="file"]), #self-review-form textarea, #self-review-form select').forEach((field) => {
-    field.addEventListener('input', scheduleSubmissionDraftSave);
-    field.addEventListener('change', scheduleSubmissionDraftSave);
+    const updateDraft = () => { field.removeAttribute('aria-invalid'); field.closest('.form-validation-invalid')?.classList.remove('form-validation-invalid'); scheduleSubmissionDraftSave(); };
+    field.addEventListener('input', updateDraft);
+    field.addEventListener('change', updateDraft);
   });
   $('#self-review-form').addEventListener('invalid', (event) => {
     const block = event.target.closest('.form-accordion');
@@ -386,6 +404,8 @@
   $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); saveSubmissionDraft(); });
   $('#skill-file').addEventListener('change', (event) => {
     const file = event.target.files[0];
+    event.target.removeAttribute('aria-invalid');
+    event.target.classList.remove('form-validation-invalid');
     $('#skill-file-status').textContent = file ? `${file.name} · ${formatSize(file.size)}` : '尚未选择文件';
   });
   $('#skill-showcase-file').addEventListener('change', (event) => {
@@ -454,20 +474,20 @@
     const effectChange = $('#skill-effect-change');
     const effectRating = $('#skill-effect-rating');
     const effectOther = $('#skill-effect-other');
-    if (!partner) { showSubmissionError('当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。'); return; }
-    if (!title) { showSubmissionError('请填写成果名称。', $('#skill-title')); return; }
-    if (!scenario.value.trim()) { showSubmissionError('请填写适用场景，说明成果解决什么问题。', scenario); return; }
-    if (!effectTypes.length) { showSubmissionError('请至少选择一项应用效果：提效、提质或其他。', document.querySelector('input[name="skill-effect-type"]')); return; }
-    if ($('#skill-effect-other-toggle').checked && !effectOther.value.trim()) { showSubmissionError('请选择“其他”时，请填写其他效果说明。', effectOther); return; }
-    if (!effectChange.value.trim()) { showSubmissionError('请填写使用前后的变化，说明成果带来的实际改善。', effectChange); return; }
-    if (!effectRating.value) { showSubmissionError('请选择个人效果评估。', effectRating); return; }
-    if (!evidenceInput.value.trim()) { showSubmissionError('请粘贴 AI 对话的详细操作步骤链接。', evidenceInput); return; }
-    if (!file) { showSubmissionError('请选择要提交的 Skill 文件。', $('#skill-file')); return; }
-    if (!tested.checked) { showSubmissionError('请确认已实际试用，且内容不含不应共享的数据。', tested); return; }
-    if (!steps.value.trim() && !guideInEvidence.checked) {
-      showSubmissionError('请填写使用步骤，或勾选“附件或 AI 对话中已包含完整操作步骤”。', guideInEvidence);
-      return;
-    }
+    const issues = [];
+    if (!partner) issues.push({ message: '当前账号尚未绑定伙伴记录，请联系 AI 应用官处理。' });
+    if (!title) issues.push({ message: '请填写“成果名称”。', field: $('#skill-title') });
+    if (!scenario.value.trim()) issues.push({ message: '请填写“适用场景”，说明成果解决什么问题。', field: scenario });
+    if (!effectTypes.length) issues.push({ message: '请至少选择一项“效果类型”：提效、提质或其他。', field: document.querySelector('input[name="skill-effect-type"]'), group: $('.effect-options') });
+    if ($('#skill-effect-other-toggle').checked && !effectOther.value.trim()) issues.push({ message: '选择“其他”后，请填写“其他效果说明”。', field: effectOther });
+    if (!effectChange.value.trim()) issues.push({ message: '请填写“应用前后对比”。', field: effectChange });
+    if (!effectRating.value) issues.push({ message: '请选择“应用效果自评”。', field: effectRating });
+    if (!evidenceInput.value.trim()) issues.push({ message: '请粘贴“AI 对话的详细操作步骤（链接）”。', field: evidenceInput });
+    if (!file) issues.push({ message: '请上传要提交的 Skill 文件。', field: $('#skill-file') });
+    if (!tested.checked) issues.push({ message: '请勾选“我已实际试用”的提交确认。', field: tested });
+    if (!steps.value.trim() && !guideInEvidence.checked) issues.push({ message: '请填写“使用步骤”，或勾选“附件或 AI 对话中已包含完整操作步骤”。', field: guideInEvidence });
+    if (issues.length) { showSubmissionIssues(issues); return; }
+    clearSubmissionValidation();
     const evidence = normalizeEvidence($('#evidence-url').value);
     $('#evidence-url').value = evidence;
     const submit = event.currentTarget.querySelector('[type="submit"]');

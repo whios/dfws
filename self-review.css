@@ -39,6 +39,10 @@
 #skill-effect-other-field[hidden] { display: none; }
 .self-review-section input, .self-review-section select, .self-review-section textarea { border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: inherit; min-height: 38px; padding: 8px 10px; width: 100%; }
 .self-review-section textarea { min-height: 104px; resize: vertical; }
+.self-review-section input[aria-invalid="true"], .self-review-section select[aria-invalid="true"], .self-review-section textarea[aria-invalid="true"], .form-validation-invalid { border-color: #b84a3f; box-shadow: 0 0 0 2px rgba(184, 74, 63, .12); }
+.submission-validation { background: #fff4f2; border-left: 3px solid #b84a3f; color: #6d2b25; padding: 12px 14px; }
+.submission-validation strong { display: block; font-size: 13px; }
+.submission-validation ul { display: grid; gap: 4px; font-size: 12px; margin: 8px 0 0; padding-left: 18px; }
 .evidence-preview { align-items: center; background: #e8f5ec; display: flex; justify-content: space-between; padding: 11px 12px; }
 .evidence-preview span { color: var(--green); font-size: 12px; font-weight: 700; }
 .evidence-preview a { color: var(--teal); font-size: 13px; font-weight: 700; }
