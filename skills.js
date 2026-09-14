@@ -211,7 +211,16 @@ function skills() {
     event.preventDefault();
     if (!editingSkillId) return;
     const submit = $('#skill-edit-submit');
-    try { submit.disabled = true; await window.DfwsCloud.editSkill(editingSkillId, { title: $('#skill-edit-title').value.trim(), description: $('#skill-edit-description').value.trim() }); $('#skill-edit-dialog').close(); toast('成果内容已修改'); await load(); }
+    const statusValue = $(`[data-skill-status="${editingSkillId}"]`)?.value;
+    const reviewNote = $(`[data-skill-note="${editingSkillId}"]`)?.value;
+    if (!statusValue) { toast('成果状态已变化，请关闭编辑框后刷新重试。'); return; }
+    try {
+      submit.disabled = true;
+      const result = await window.DfwsCloud.editSkill(editingSkillId, { title: $('#skill-edit-title').value.trim(), description: $('#skill-edit-description').value.trim(), status: statusValue, reviewNote });
+      $('#skill-edit-dialog').close();
+      toast(result.email === 'sent' ? '成果与审核状态已保存，站内通知和邮件已发送' : result.email === 'failed' ? `成果与审核状态已保存；邮件未发出：${result.message}` : '成果与审核状态已保存');
+      await load();
+    }
     catch (error) { toast(error.message || '修改失败'); }
     finally { submit.disabled = false; }
   };
