@@ -199,10 +199,12 @@
   function queueSync(state) { if (localPreview || readOnly || !remoteHasData || !staff()) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => writeState(state).catch((error) => { status('云端同步失败'); console.error(error); }), 600); }
   async function listProfiles() {
     if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
-    const [profilesRes, partnersRes] = await Promise.all([client.from('profiles').select('id, email, display_name, role, partner_id, created_at').order('created_at'), client.from('partners').select('id, owner_name, brand, department').order('brand').order('owner_name')]);
-    if (profilesRes.error) throw profilesRes.error;
-    if (partnersRes.error) throw partnersRes.error;
-    return { profiles: profilesRes.data, partners: partnersRes.data };
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/list-profiles', { headers: { Authorization: `Bearer ${session.access_token}` } });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '人员账号加载失败。');
+    return { profiles: result.profiles || [], partners: result.partners || [] };
   }
   // 成果审核只需要成果归属信息，不能复用包含账号和绑定关系的人员权限接口。
   async function listSkillPartners() {
