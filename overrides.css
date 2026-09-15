@@ -231,12 +231,12 @@ a.nav-item { text-decoration: none; }
 .skill-card-actions select { border: 1px solid var(--line); border-radius: 5px; font: inherit; max-width: 132px; padding: 6px; }
 .skill-card-actions .button { padding: 7px 9px; }
 .skill-card-note { border: 1px solid var(--line); border-radius: 5px; font: inherit; min-height: 54px; padding: 7px; resize: vertical; width: 100%; }
-.skill-evidence-link { width: fit-content; }
-.skill-showcase { background: #f7fbfa; border-left: 3px solid #91c8c0; display: grid; gap: 6px; padding: 9px 10px; }
+.skill-evidence-link { max-width: 100%; overflow-wrap: anywhere; width: fit-content; word-break: break-word; }
+.skill-showcase { background: #f7fbfa; border-left: 3px solid #91c8c0; display: grid; gap: 6px; min-width: 0; padding: 9px 10px; }
 .skill-showcase strong { color: var(--teal); font-size: 12px; }
 .skill-showcase > span { color: var(--muted); font-size: 12px; line-height: 1.55; white-space: pre-line; }
-.showcase-links, .resource-download-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.showcase-links .action-link { font-size: 12px; }
+.showcase-links, .resource-download-actions { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.showcase-links .action-link { font-size: 12px; max-width: 100%; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 .skill-card-details { border-top: 1px solid var(--line); padding-top: 10px; }
 .skill-card-details summary { color: var(--teal); cursor: pointer; font-size: 12px; font-weight: 650; }
 .asset-actions { white-space: nowrap; }
