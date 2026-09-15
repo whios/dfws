@@ -29,7 +29,7 @@ export default async function handler(request, response) {
     if (!allowedRoles.has(actor?.role)) return reply(response, 403, { error: '当前账号没有查看下载明细的权限。' });
 
     const [resources, partners, allDownloads] = await Promise.all([
-      supabaseFetch('/rest/v1/skill_resources?select=id,partner_id&order=created_at.desc', { headers: serviceHeaders() }),
+      supabaseFetch('/rest/v1/skill_resources?select=id,partner_id,status,visibility_scope&order=created_at.desc', { headers: serviceHeaders() }),
       supabaseFetch('/rest/v1/partners?select=id,brand', { headers: serviceHeaders() }),
       supabaseFetch('/rest/v1/skill_downloads?select=resource_id,downloaded_by,downloaded_at&order=downloaded_at.desc', { headers: serviceHeaders() })
     ]);
@@ -38,7 +38,10 @@ export default async function handler(request, response) {
     if (actor.role === 'brand_admin') {
       const managementBrand = partnerBrand.get(actor.partner_id);
       if (!managementBrand) return reply(response, 403, { error: '品牌管理员尚未绑定有效品牌，无法查看下载明细。' });
-      permittedResourceIds = new Set((resources || []).filter((resource) => partnerBrand.get(resource.partner_id) === managementBrand).map((resource) => resource.id));
+      permittedResourceIds = new Set((resources || []).filter((resource) => (
+        partnerBrand.get(resource.partner_id) === managementBrand
+        || (resource.status === 'published' && resource.visibility_scope === 'all_partners')
+      )).map((resource) => resource.id));
     }
     const downloads = (allDownloads || []).filter((item) => permittedResourceIds.has(item.resource_id));
     const downloaderIds = [...new Set(downloads.map((item) => item.downloaded_by).filter(Boolean))];
