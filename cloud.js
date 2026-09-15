@@ -65,10 +65,11 @@
   }
 
   async function loadState() {
-    const [partnersRes, assetsRes, risksRes, reviewsRes, resourcesRes] = await Promise.all([
+    const [partnersRes, assetsRes, risksRes, reviewsRes, resourcesRes, brandReviewProgress] = await Promise.all([
       client.from('partners').select('*').order('brand').order('owner_name'), client.from('assets').select('*, skill_resources(status)').order('created_at'),
       client.from('risks').select('*').order('due_date'), client.from('reviews').select('*'),
-      client.from('skill_resources').select('id, partner_id, status, created_at, partners(owner_name, brand, department)').order('created_at', { ascending: false })
+      client.from('skill_resources').select('id, partner_id, status, created_at, partners(owner_name, brand, department)').order('created_at', { ascending: false }),
+      brandAdmin() ? listBrandReviewProgress().catch((error) => { console.error('Brand review progress unavailable', error); return []; }) : Promise.resolve([])
     ]);
     for (const result of [partnersRes, assetsRes, risksRes, reviewsRes, resourcesRes]) if (result.error) throw result.error;
     const hasBrandScope = brandAdmin();
@@ -85,7 +86,16 @@
     const reviews = {};
     scopedReviews.forEach((r) => { const partner = scopedPartnersData.find((p) => p.id === r.partner_id); if (partner) reviews[partner.owner_name] = { self: r.self_review, selfLevel: r.self_level, manager: r.manager_review, managerLevel: r.manager_level, officer: r.officer_review, officerLevel: r.officer_level }; });
     const publicationStatus = (status) => ({ pending: '待审核', published: '已发布', rejected: '退回修改', archived: '已下架' })[status] || '待审核';
+    window.DfwsBrandReviewProgress = brandReviewProgress;
     return { partners, reviews, assets: scopedAssets.map((a) => ({ id: a.id, resourceId: a.skill_resource_id || null, name: a.name, type: a.asset_type, brand: a.brand, department: a.department, owner: a.owner_name, platform: a.platform, task: a.task, calls: a.calls, level: a.skill_resources?.status && a.verification_level === 'V0' ? 'V1' : a.verification_level, status: a.skill_resources?.status ? publicationStatus(a.skill_resources.status) : '补录资产', sourceStatus: a.skill_resources?.status || null, evidence: a.evidence_path, review: a.review_note, checks: a.checks || [] })), risks: scopedRisks.map((r) => ({ id: r.id, kind: r.kind, priority: r.priority, brand: r.brand, owner: r.owner_name, due: r.due_date, status: r.status, note: r.note })), submissions: scopedResources.map((r) => ({ id: r.id, partnerId: r.partner_id, status: r.status, createdAt: r.created_at, owner: r.partners?.owner_name || '未关联伙伴', brand: r.partners?.brand || '未填写品牌', department: r.partners?.department || '未填写部门' })) };
+  }
+  async function listBrandReviewProgress() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/list-brand-review-progress', { headers: { Authorization: `Bearer ${session.access_token}` } });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '品牌审核进度加载失败。');
+    return result.brands || [];
   }
 
   async function writeState(state) {
@@ -239,7 +249,7 @@
     if (!response.ok || !result.profile?.id) throw new Error(result.error || '账号未更新，请刷新后重试。');
     return result.profile;
   }
-  async function editPerson(id, values) {
+  async function editPerson(id, displayName) {
     requireWritable();
     if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以编辑人员信息。');
     if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不保存人员信息，请使用正式管理端操作。');
@@ -247,7 +257,7 @@
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
     const response = await fetch('/api/staff/edit-person', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ profileId: id, displayName: values.displayName, brand: values.brand || null })
+      body: JSON.stringify({ profileId: id, displayName })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || '人员信息未保存，请刷新后重试。');
