@@ -236,7 +236,8 @@ a.nav-item { text-decoration: none; }
 .skill-showcase strong { color: var(--teal); font-size: 12px; }
 .skill-showcase > span { color: var(--muted); font-size: 12px; line-height: 1.55; white-space: pre-line; }
 .showcase-links, .resource-download-actions { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.showcase-links .action-link { font-size: 12px; max-width: 100%; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.showcase-links .action-link, .skill-showcase > .action-link { font-size: 12px; max-width: 100%; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.skill-showcase > .action-link { display: block; inline-size: 100%; }
 .skill-card-details { border-top: 1px solid var(--line); padding-top: 10px; }
 .skill-card-details summary { color: var(--teal); cursor: pointer; font-size: 12px; font-weight: 650; }
 .asset-actions { white-space: nowrap; }
