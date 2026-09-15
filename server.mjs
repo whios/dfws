@@ -13,6 +13,7 @@ import updateProfile from './api/staff/update-profile.js';
 import editPerson from './api/staff/edit-person.js';
 import listSkillDownloads from './api/staff/list-skill-downloads.js';
 import listProfiles from './api/staff/list-profiles.js';
+import listBrandReviewProgress from './api/staff/list-brand-review-progress.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -27,7 +28,8 @@ const apiHandlers = new Map([
   ['/api/staff/update-profile', updateProfile],
   ['/api/staff/edit-person', editPerson],
   ['/api/staff/list-skill-downloads', listSkillDownloads],
-  ['/api/staff/list-profiles', listProfiles]
+  ['/api/staff/list-profiles', listProfiles],
+  ['/api/staff/list-brand-review-progress', listBrandReviewProgress]
 ]);
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
