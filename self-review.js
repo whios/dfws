@@ -486,7 +486,13 @@
     if (!file) issues.push({ message: '请上传要提交的 Skill 文件。', field: $('#skill-file') });
     if (!tested.checked) issues.push({ message: '请勾选“我已实际试用”的提交确认。', field: tested });
     if (!steps.value.trim() && !guideInEvidence.checked) issues.push({ message: '请填写“使用步骤”，或勾选“附件或 AI 对话中已包含完整操作步骤”。', field: guideInEvidence });
-    if (issues.length) { showSubmissionIssues(issues); return; }
+    if (issues.length) {
+      // Persist the current form immediately: the user may submit before the
+      // debounced field listener has had time to write the latest draft.
+      saveSubmissionDraft();
+      showSubmissionIssues(issues);
+      return;
+    }
     clearSubmissionValidation();
     const evidence = normalizeEvidence($('#evidence-url').value);
     $('#evidence-url').value = evidence;
