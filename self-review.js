@@ -8,6 +8,8 @@
   let evaluationCampaigns = [];
   let libraryFilters = { query: '', brand: '', type: '', sort: 'recent' };
   let submissionDraftTimer = null;
+  let resubmittingResource = null;
+  let restoredResubmissionId = null;
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
@@ -36,6 +38,7 @@
       output: $('#skill-output').value,
       evidence: $('#evidence-url').value,
       guideInEvidence: $('#skill-guide-in-evidence').checked,
+      resubmissionId: resubmittingResource?.id || restoredResubmissionId,
       updatedAt: new Date().toISOString()
     };
   }
@@ -84,6 +87,7 @@
     $('#skill-output').value = draft.output || '';
     $('#evidence-url').value = draft.evidence || '';
     $('#skill-guide-in-evidence').checked = Boolean(draft.guideInEvidence);
+    restoredResubmissionId = typeof draft.resubmissionId === 'string' ? draft.resubmissionId : null;
     syncOtherEffectField();
     $('#skill-file-status').textContent = '草稿已恢复，请重新选择成果文件';
     $('#skill-showcase-file-status').textContent = '草稿已恢复；如有展示附件，请重新选择文件';
@@ -335,6 +339,15 @@
       const resources = await window.DfwsCloud.listSkillResources();
       const ratings = await window.DfwsCloud.listSkillRatingSummaries(resources.resources).catch((error) => { console.warn('评分数据加载失败', error); return []; });
       resourceData = { ...resources, ratings };
+      if (restoredResubmissionId) {
+        const resource = resourceData.resources.find((item) => item.id === restoredResubmissionId && item.uploaded_by === window.DfwsCloud.profile?.id && item.status === 'rejected');
+        if (resource) {
+          resubmittingResource = resource;
+          $('#self-review-form [type="submit"]').textContent = '保存修改并重新提交';
+          $('#skill-file-status').textContent = resource.file_name ? `原成果文件：${resource.file_name}；如需替换请重新选择文件` : '请重新选择成果文件';
+        }
+        restoredResubmissionId = null;
+      }
       evaluationCampaigns = await window.DfwsCloud.listSkillEvaluationCampaigns(resourceData.resources).catch(() => evaluationCampaigns);
       renderResources(resourceData);
       renderSubmissions(resourceData, evaluationCampaigns);
@@ -373,9 +386,11 @@
     const id = event.target.dataset.resubmit;
     if (!id) return;
     const resource = resourceData.resources.find((item) => item.id === id);
+    if (!resource || resource.status !== 'rejected') return;
     const fields = parseResourceDescription(resource?.description);
+    resubmittingResource = resource;
     showPartnerView('submit');
-    $('#skill-title').value = resource ? `${resource.title}（修改版）` : '';
+    $('#skill-title').value = resource.title || '';
     $('#skill-type').value = fields.type || 'Skill';
     $('#skill-visibility').value = resource?.visibility_scope || 'all_partners';
     $('#skill-scenario').value = fields.scenario || '';
@@ -396,8 +411,9 @@
     $('#evidence-url').value = fields.evidence || '';
     $('#skill-tested').checked = false;
     $('#skill-file').value = '';
-    $('#skill-file-status').textContent = '请重新选择修改后的成果文件';
-    $('#form-message').textContent = '已带回原提交内容。请按审核说明修改，并重新选择成果文件后提交。';
+    $('#skill-file-status').textContent = resource.file_name ? `原成果文件：${resource.file_name}；如需替换请重新选择文件` : '请重新选择成果文件';
+    $('#form-message').textContent = '已带回原提交内容。请按审核说明修改，保存后将更新原成果并重新进入审核。';
+    $('#self-review-form [type="submit"]').textContent = '保存修改并重新提交';
     saveSubmissionDraft();
     $('#skill-title').focus();
   });
@@ -483,7 +499,7 @@
     if (!effectChange.value.trim()) issues.push({ message: '请填写“应用前后对比”。', field: effectChange });
     if (!effectRating.value) issues.push({ message: '请选择“应用效果自评”。', field: effectRating });
     if (!evidenceInput.value.trim()) issues.push({ message: '请粘贴“AI 对话的详细操作步骤（链接）”。', field: evidenceInput });
-    if (!file) issues.push({ message: '请上传要提交的 Skill 文件。', field: $('#skill-file') });
+    if (!file && !resubmittingResource?.file_path) issues.push({ message: '请上传要提交的 Skill 文件。', field: $('#skill-file') });
     if (!tested.checked) issues.push({ message: '请勾选“我已实际试用”的提交确认。', field: tested });
     if (!steps.value.trim() && !guideInEvidence.checked) issues.push({ message: '请填写“使用步骤”，或勾选“附件或 AI 对话中已包含完整操作步骤”。', field: guideInEvidence });
     if (issues.length) {
@@ -503,7 +519,11 @@
       submit.setAttribute('aria-busy', 'true');
       submit.textContent = '正在上传...';
       setStatus('成果上传中');
-      await window.DfwsCloud.uploadSkill(partner, { title, description: buildResourceDescription(evidence), showcaseFile, visibilityScope: $('#skill-visibility').value }, file);
+      if (resubmittingResource) {
+        await window.DfwsCloud.resubmitSkill(resubmittingResource, { title, description: buildResourceDescription(evidence), showcaseFile, visibilityScope: $('#skill-visibility').value }, file);
+      } else {
+        await window.DfwsCloud.uploadSkill(partner, { title, description: buildResourceDescription(evidence), showcaseFile, visibilityScope: $('#skill-visibility').value }, file);
+      }
       $('#skill-title').value = '';
       $('#skill-visibility').value = 'all_partners';
       $('#skill-scenario').value = '';
@@ -525,6 +545,9 @@
       $('#skill-tested').checked = false;
       $('#skill-file').value = '';
       $('#skill-file-status').textContent = '成果已提交，等待审核';
+      resubmittingResource = null;
+      restoredResubmissionId = null;
+      submit.textContent = '提交成果审核';
       clearSubmissionDraft();
       $('#form-message').textContent = '成果已进入审核队列，审核通过后将出现在成果库中。';
       setStatus('成果已提交');
@@ -536,7 +559,7 @@
       resourceSubmitInFlight = false;
       submit.disabled = false;
       submit.removeAttribute('aria-busy');
-      submit.textContent = '提交成果审核';
+      submit.textContent = resubmittingResource ? '保存修改并重新提交' : '提交成果审核';
     }
   });
   async function init() {

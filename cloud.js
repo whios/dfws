@@ -459,6 +459,59 @@
     }
     return data;
   }
+  async function resubmitSkill(resource, values, file) {
+    requireWritable();
+    if (!profile || profile.role !== 'partner' || resource?.uploaded_by !== profile.id || resource.status !== 'rejected') throw new Error('只能修改本人被退回的成果。');
+    if (file?.size > 200 * 1024 * 1024) throw new Error('单个文件最大支持 200MB。');
+    if (values.showcaseFile?.size > 200 * 1024 * 1024) throw new Error('成果展示附件最大支持 200MB。');
+    const bucket = client.storage.from('skill-files');
+    const uploadedPaths = [];
+    let filePath = resource.file_path;
+    let fileName = resource.file_name;
+    let mimeType = resource.mime_type;
+    let sizeBytes = resource.size_bytes;
+    try {
+      if (file) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'skill-file';
+        filePath = `${profile.id}/${crypto.randomUUID()}-${safeName}`;
+        const { error } = await bucket.upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream' });
+        if (error) throw error;
+        uploadedPaths.push(filePath);
+        fileName = file.name;
+        mimeType = file.type || null;
+        sizeBytes = file.size;
+      }
+      if (!filePath) throw new Error('请上传成果文件。');
+      let showcasePath = descriptionValue(resource.description, '成果展示附件路径');
+      let showcaseName = descriptionValue(resource.description, '成果展示附件名称');
+      if (values.showcaseFile) {
+        const safeName = values.showcaseFile.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'showcase-file';
+        showcasePath = `${profile.id}/showcase-${crypto.randomUUID()}-${safeName}`;
+        const { error } = await bucket.upload(showcasePath, values.showcaseFile, { cacheControl: '3600', upsert: false, contentType: values.showcaseFile.type || 'application/octet-stream' });
+        if (error) throw error;
+        uploadedPaths.push(showcasePath);
+        showcaseName = values.showcaseFile.name;
+      }
+      const description = [values.description || '', showcasePath ? `成果展示附件路径：${showcasePath}` : '', showcaseName ? `成果展示附件名称：${showcaseName}` : ''].filter(Boolean).join('\n\n');
+      const { data, error } = await client.from('skill_resources').update({
+        title: values.title,
+        description,
+        visibility_scope: values.visibilityScope || 'all_partners',
+        file_name: fileName,
+        file_path: filePath,
+        mime_type: mimeType,
+        size_bytes: sizeBytes,
+        status: 'pending',
+        review_note: null,
+        updated_at: new Date().toISOString()
+      }).eq('id', resource.id).eq('uploaded_by', profile.id).eq('status', 'rejected').select().single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      if (uploadedPaths.length) await bucket.remove(uploadedPaths);
+      throw error;
+    }
+  }
   async function downloadSkill(resource) {
     return downloadResourceFile(resource, resource.file_path, resource.file_name || 'skill-file');
   }
@@ -647,5 +700,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, listSkillDownloads, uploadSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, listSkillDownloads, uploadSkill, resubmitSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();
