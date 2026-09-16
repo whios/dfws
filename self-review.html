@@ -125,7 +125,7 @@
               <label>上传 Skill 文件
                 <input id="skill-file" type="file" required accept=".zip,.json,.txt,.md,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" />
               </label>
-              <p class="field-hint">支持压缩包、文档、表格和演示文件等格式，单个文件不超过 200MB。</p>
+              <p class="field-hint file-retention-message" id="skill-file-status" aria-live="polite">请选择 Skill 文件包。支持压缩包、文档、表格和演示文件等格式，单个文件不超过 200MB。</p>
               <label class="check-field"><input id="skill-guide-in-evidence" type="checkbox" /><span>附件或 AI 对话中已包含完整操作步骤，可供同伴照着使用。</span></label>
               <label class="check-field"><input id="skill-tested" type="checkbox" required />我已实际试用，确认上述步骤可用，且内容不含不应共享的数据。</label>
             </div>
@@ -148,7 +148,7 @@
         </section>
         <section id="submission-validation" class="submission-validation" hidden aria-live="assertive" aria-atomic="true"></section>
         <footer class="self-review-footer">
-          <p id="form-message">正在连接云端。</p><span class="sub" id="submission-draft-status" aria-live="polite"></span><span class="sub" id="skill-file-status">尚未选择文件</span>
+          <p id="form-message">正在连接云端。</p><span class="sub" id="submission-draft-status" aria-live="polite"></span>
           <button class="button primary" type="submit">提交成果审核</button>
         </footer>
       </form>
