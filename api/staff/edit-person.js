@@ -44,7 +44,7 @@ export default async function handler(request, response) {
     if (!staffRoles.has(actorRows?.[0]?.role)) return reply(response, 403, { error: '仅 AI 应用官和负责人可以编辑人员信息。' });
 
     const { profileId, displayName, brand: requestedBrand } = request.body || {};
-    const nextName = String(displayName || '').trim();
+    const nextName = typeof displayName === 'string' ? displayName.trim() : '';
     if (!uuidPattern.test(profileId || '') || !nextName || nextName.length > 40) return reply(response, 400, { error: '请填写不超过 40 个字符的姓名。' });
 
     const profiles = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(profileId)}&select=id,email,display_name,partner_id`, { headers: serviceHeaders() });
