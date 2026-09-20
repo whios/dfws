@@ -30,6 +30,7 @@
 .section-title { align-items: baseline; display: flex; justify-content: space-between; }
 .section-title h2 { font-size: 16px; margin: 0; }
 .section-title span, .field-hint { color: var(--muted); font-size: 12px; margin: 0; }
+.file-retention-message { background: #f7fbfa; border-left: 3px solid var(--teal); color: #24464a; line-height: 1.6; padding: 8px 10px; }
 .self-review-tip { background: var(--teal-soft); border-left: 3px solid var(--teal); color: #24464a; font-size: 13px; line-height: 1.65; margin: 0; padding: 10px 12px; }
 .self-review-section label { display: grid; font-size: 12px; font-weight: 700; gap: 6px; }
 .self-review-section .check-field { align-items: center; display: flex; font-weight: 500; line-height: 1.5; }

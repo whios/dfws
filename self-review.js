@@ -89,7 +89,7 @@
     $('#skill-guide-in-evidence').checked = Boolean(draft.guideInEvidence);
     restoredResubmissionId = typeof draft.resubmissionId === 'string' ? draft.resubmissionId : null;
     syncOtherEffectField();
-    $('#skill-file-status').textContent = '草稿已恢复，请重新选择成果文件';
+    $('#skill-file-status').textContent = '草稿已恢复。请重新选择 Skill 文件包后再提交。';
     $('#skill-showcase-file-status').textContent = '草稿已恢复；如有展示附件，请重新选择文件';
     $('#submission-draft-status').textContent = '已恢复本机草稿；附件需重新选择';
   }
@@ -344,7 +344,7 @@
         if (resource) {
           resubmittingResource = resource;
           $('#self-review-form [type="submit"]').textContent = '保存修改并重新提交';
-          $('#skill-file-status').textContent = resource.file_name ? `原成果文件：${resource.file_name}；如需替换请重新选择文件` : '请重新选择成果文件';
+          $('#skill-file-status').textContent = resource.file_name ? `原 Skill 文件包已保留：${resource.file_name}。本次不选择新文件将继续使用原文件；如需替换，请重新选择。` : '请重新选择 Skill 文件包。';
         }
         restoredResubmissionId = null;
       }
@@ -411,7 +411,7 @@
     $('#evidence-url').value = fields.evidence || '';
     $('#skill-tested').checked = false;
     $('#skill-file').value = '';
-    $('#skill-file-status').textContent = resource.file_name ? `原成果文件：${resource.file_name}；如需替换请重新选择文件` : '请重新选择成果文件';
+    $('#skill-file-status').textContent = resource.file_name ? `原 Skill 文件包已保留：${resource.file_name}。本次不选择新文件将继续使用原文件；如需替换，请重新选择。` : '请重新选择 Skill 文件包。';
     $('#form-message').textContent = '已带回原提交内容。请按审核说明修改，保存后将更新原成果并重新进入审核。';
     $('#self-review-form [type="submit"]').textContent = '保存修改并重新提交';
     saveSubmissionDraft();
@@ -422,7 +422,7 @@
     const file = event.target.files[0];
     event.target.removeAttribute('aria-invalid');
     event.target.classList.remove('form-validation-invalid');
-    $('#skill-file-status').textContent = file ? `${file.name} · ${formatSize(file.size)}` : '尚未选择文件';
+    $('#skill-file-status').textContent = file ? `本次将替换为：${file.name} · ${formatSize(file.size)}` : '未选择新文件；重新提交时将继续使用原 Skill 文件包。';
   });
   $('#skill-showcase-file').addEventListener('change', (event) => {
     const file = event.target.files[0];
