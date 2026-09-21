@@ -1,5 +1,6 @@
 const allowedRoles = new Set(['partner', 'manager', 'brand_admin', 'ai_officer', 'leader']);
 const staffRoles = new Set(['manager', 'ai_officer']);
+const allowedBrands = new Set(['迈点', '最佳东方', '乔邦', '先之', '技术中心', '职能']);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 
 function reply(response, status, body) {
@@ -20,7 +21,7 @@ function serviceHeaders() {
 }
 
 async function profileWithBrand(id) {
-  const profiles = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=id,role,partner_id`, { headers: serviceHeaders() });
+  const profiles = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=id,role,partner_id,display_name`, { headers: serviceHeaders() });
   const profile = profiles?.[0];
   if (!profile) return null;
   if (!profile.partner_id) return { ...profile, brand: null };
@@ -38,19 +39,38 @@ export default async function handler(request, response) {
     const actor = await profileWithBrand(currentUser.id);
     if (!staffRoles.has(actor?.role)) return reply(response, 403, { error: '当前账号没有人员权限管理权限。' });
 
-    const { profileId, role, partnerId } = request.body || {};
+    const { profileId, role, partnerId, newPartner } = request.body || {};
     if (!uuidPattern.test(profileId || '') || !allowedRoles.has(role)) return reply(response, 400, { error: '账号或角色信息无效。' });
     if (partnerId && !uuidPattern.test(partnerId)) return reply(response, 400, { error: '伙伴档案信息无效。' });
+    if (partnerId && newPartner) return reply(response, 400, { error: '不能同时选择已有伙伴和新建伙伴档案。' });
 
     const target = await profileWithBrand(profileId);
     if (!target) return reply(response, 404, { error: '账号不存在或已删除。' });
-    if (partnerId) {
-      const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(partnerId)}&select=brand`, { headers: serviceHeaders() });
+    let nextPartnerId = partnerId || null;
+    if (newPartner) {
+      if (target.partner_id) return reply(response, 409, { error: '该账号已绑定伙伴档案，请刷新后使用“选择伙伴”调整。' });
+      const ownerName = String(newPartner.ownerName || '').trim();
+      const brand = String(newPartner.brand || '').trim();
+      const department = String(newPartner.department || '').trim();
+      if (!ownerName || ownerName.length > 40 || !allowedBrands.has(brand) || !department || department.length > 80) {
+        return reply(response, 400, { error: '请填写姓名、有效品牌和不超过 80 个字符的部门。' });
+      }
+      if (ownerName !== String(target.display_name || '').trim()) return reply(response, 400, { error: '新建伙伴档案姓名必须与当前账号姓名一致。' });
+      const created = await supabaseFetch('/rest/v1/partners?on_conflict=owner_name,brand,department', {
+        method: 'POST',
+        headers: { ...serviceHeaders(), Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({ owner_name: ownerName, brand, department })
+      });
+      nextPartnerId = created?.[0]?.id || null;
+      if (!nextPartnerId) return reply(response, 409, { error: '伙伴档案未能创建，请刷新后重试。' });
+    }
+    if (nextPartnerId) {
+      const partners = await supabaseFetch(`/rest/v1/partners?id=eq.${encodeURIComponent(nextPartnerId)}&select=brand`, { headers: serviceHeaders() });
       if (!partners?.[0]?.brand) return reply(response, 400, { error: '所选伙伴档案不存在。' });
     }
 
     const updated = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(profileId)}`, {
-      method: 'PATCH', headers: { ...serviceHeaders(), Prefer: 'return=representation' }, body: JSON.stringify({ role, partner_id: partnerId || null })
+      method: 'PATCH', headers: { ...serviceHeaders(), Prefer: 'return=representation' }, body: JSON.stringify({ role, partner_id: nextPartnerId })
     });
     if (!updated?.length) return reply(response, 409, { error: '账号未更新，请刷新后重试。' });
     return reply(response, 200, { ok: true, profile: updated[0] });
