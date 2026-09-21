@@ -243,7 +243,7 @@
     if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
     const response = await fetch('/api/staff/update-profile', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ profileId: id, role: values.role, partnerId: values.partner_id || null })
+      body: JSON.stringify({ profileId: id, role: values.role, partnerId: values.partner_id || null, newPartner: values.newPartner || null })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.profile?.id) throw new Error(result.error || '账号未更新，请刷新后重试。');
