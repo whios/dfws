@@ -134,13 +134,55 @@ function skills() {
     }
   };
   const normalizeEvidence = (value) => String(value || '').trim().match(/https?:\/\/[^\s<>"'）】]+/i)?.[0]?.replace(/[，。；、]+$/u, '') || String(value || '').trim();
+  const syncAdminOtherEffectField = () => {
+    const field = $('#admin-skill-effect-other-field');
+    const selected = $('#admin-skill-effect-other-toggle').checked;
+    field.hidden = !selected;
+    if (!selected) $('#admin-skill-effect-other').value = '';
+  };
+  const clearAdminValidation = () => {
+    const panel = $('#admin-skill-validation');
+    panel.hidden = true;
+    panel.replaceChildren();
+    $('#admin-skill-form').querySelectorAll('[aria-invalid="true"], .form-validation-invalid').forEach((field) => {
+      field.removeAttribute('aria-invalid');
+      field.classList.remove('form-validation-invalid');
+    });
+  };
+  const showAdminIssues = (issues) => {
+    const panel = $('#admin-skill-validation');
+    const blocks = new Set();
+    issues.forEach((issue) => {
+      const field = issue.field;
+      if (field) {
+        field.setAttribute('aria-invalid', 'true');
+        field.classList.add('form-validation-invalid');
+        const block = field.closest('.form-accordion');
+        if (block) blocks.add(block);
+      }
+      if (issue.group) issue.group.classList.add('form-validation-invalid');
+    });
+    blocks.forEach((block) => { block.open = true; });
+    panel.hidden = false;
+    panel.innerHTML = `<strong>还有 ${issues.length} 项需要完善</strong><ul>${issues.map((issue) => `<li>${esc(issue.message)}</li>`).join('')}</ul>`;
+    const first = issues.find((issue) => issue.field)?.field || issues.find((issue) => issue.group)?.group;
+    first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    first?.focus?.({ preventScroll: true });
+  };
   const buildAdminDescription = (evidence) => [
     `成果类型：${$('#admin-skill-type').value}`,
     `适用场景：${$('#admin-skill-scenario').value.trim()}`,
+    $('#admin-skill-showcase-links').value.trim() ? `成果展示链接：${$('#admin-skill-showcase-links').value.trim()}` : '',
+    $('#admin-skill-showcase-note').value.trim() ? `成果展示说明：${$('#admin-skill-showcase-note').value.trim()}` : '',
     `使用步骤：${$('#admin-skill-steps').value.trim()}`,
     `输入要求与示例：${$('#admin-skill-input').value.trim()}`,
     `预期输出与示例：${$('#admin-skill-output').value.trim()}`,
-    $('#admin-skill-guardrails').value.trim() ? `使用限制与数据权限：${$('#admin-skill-guardrails').value.trim()}` : '',
+    `效果类型：${[...document.querySelectorAll('input[name="admin-skill-effect-type"]:checked')].map((input) => input.value).join('、')}`,
+    `使用前后变化：${$('#admin-skill-effect-change').value.trim()}`,
+    $('#admin-skill-effect-other').value.trim() ? `其他效果说明：${$('#admin-skill-effect-other').value.trim()}` : '',
+    $('#admin-skill-effect-evidence').value.trim() ? `测算依据：${$('#admin-skill-effect-evidence').value.trim()}` : '',
+    `个人效果评估：${$('#admin-skill-effect-rating').value}`,
+    $('#admin-skill-effect-next').value.trim() ? `后续优化方向：${$('#admin-skill-effect-next').value.trim()}` : '',
     `核验证据：${evidence}`
   ].filter(Boolean).join('\n\n');
   const openAdminSubmit = () => {
@@ -148,6 +190,10 @@ function skills() {
     select.innerHTML = `<option value="">请选择归属伙伴</option>${partners.map((partner) => `<option value="${partner.id}">${esc(partner.owner_name)} · ${esc(partner.brand)} · ${esc(partner.department)}</option>`).join('')}`;
     $('#admin-skill-form').reset();
     $('#admin-skill-message').textContent = '';
+    $('#admin-skill-file-status').textContent = '请选择 Skill 文件包。支持压缩包、文档、表格和演示文件等格式，单个文件不超过 200MB。';
+    $('#admin-skill-showcase-file-status').textContent = '未选择展示附件。支持方案 PPT、PDF、图片、视频等，单个文件不超过 200MB。';
+    syncAdminOtherEffectField();
+    clearAdminValidation();
     $('#admin-skill-dialog').showModal();
   };
   ['skill-search', 'skill-brand', 'skill-review-type'].forEach((id) => $('#'+id).addEventListener(id === 'skill-search' ? 'input' : 'change', render));
@@ -228,26 +274,46 @@ function skills() {
   $('#add-admin-skill').onclick = openAdminSubmit;
   document.querySelectorAll('[data-close-admin-skill]').forEach((button) => { button.onclick = () => $('#admin-skill-dialog').close(); });
   $('#admin-skill-evidence').onblur = (event) => { event.target.value = normalizeEvidence(event.target.value); };
-  $('#admin-skill-form').addEventListener('invalid', (event) => {
-    const block = event.target.closest('.form-accordion');
-    if (block) block.open = true;
-  }, true);
+  $('#admin-skill-effect-other-toggle').onchange = syncAdminOtherEffectField;
+  $('#admin-skill-file').onchange = (event) => {
+    const file = event.target.files[0];
+    $('#admin-skill-file-status').textContent = file ? `本次将上传：${file.name} · ${formatSize(file.size)}` : '请选择 Skill 文件包。';
+  };
+  $('#admin-skill-showcase-file').onchange = (event) => {
+    const file = event.target.files[0];
+    $('#admin-skill-showcase-file-status').textContent = file ? `${file.name} · ${formatSize(file.size)}` : '未选择展示附件。';
+  };
   $('#admin-skill-form').onsubmit = async (event) => {
     event.preventDefault();
     const partner = partners.find((item) => item.id === $('#admin-skill-partner').value);
     const file = $('#admin-skill-file').files[0];
+    const showcaseFile = $('#admin-skill-showcase-file').files[0];
     const submit = $('#admin-skill-submit');
-    if (!partner || !file) { $('#admin-skill-message').textContent = '请选择归属伙伴和成果文件。'; return; }
-    if (!$('#admin-skill-steps').value.trim() && !$('#admin-skill-guide-in-evidence').checked) {
-      $('#admin-skill-message').textContent = '请填写使用步骤，或确认附件 / WorkBuddy 对话已包含完整操作步骤。';
+    const effectTypes = [...document.querySelectorAll('input[name="admin-skill-effect-type"]:checked')];
+    const issues = [];
+    if (!partner) issues.push({ message: '请选择“归属伙伴”。', field: $('#admin-skill-partner') });
+    if (!$('#admin-skill-title').value.trim()) issues.push({ message: '请填写“成果名称”。', field: $('#admin-skill-title') });
+    if (!$('#admin-skill-scenario').value.trim()) issues.push({ message: '请填写“适用场景”，说明成果解决什么问题。', field: $('#admin-skill-scenario') });
+    if (!effectTypes.length) issues.push({ message: '请至少选择一项“效果类型”：提效、提质或其他。', field: document.querySelector('input[name="admin-skill-effect-type"]'), group: $('#admin-skill-effect-options') });
+    if ($('#admin-skill-effect-other-toggle').checked && !$('#admin-skill-effect-other').value.trim()) issues.push({ message: '选择“其他”后，请填写“其他效果说明”。', field: $('#admin-skill-effect-other') });
+    if (!$('#admin-skill-effect-change').value.trim()) issues.push({ message: '请填写“应用前后对比”。', field: $('#admin-skill-effect-change') });
+    if (!$('#admin-skill-effect-rating').value) issues.push({ message: '请选择“应用效果自评”。', field: $('#admin-skill-effect-rating') });
+    if (!$('#admin-skill-evidence').value.trim()) issues.push({ message: '请粘贴“AI 对话的详细操作步骤（链接）”。', field: $('#admin-skill-evidence') });
+    if (!file) issues.push({ message: '请上传要提交的 Skill 文件。', field: $('#admin-skill-file') });
+    if (!$('#admin-skill-tested').checked) issues.push({ message: '请勾选“我已实际试用”的提交确认。', field: $('#admin-skill-tested') });
+    if (!$('#admin-skill-steps').value.trim() && !$('#admin-skill-guide-in-evidence').checked) issues.push({ message: '请填写“使用步骤”，或勾选“附件或 AI 对话中已包含完整操作步骤”。', field: $('#admin-skill-guide-in-evidence') });
+    if (issues.length) {
+      showAdminIssues(issues);
+      $('#admin-skill-message').textContent = '请按上方提示补齐信息后再提交。';
       return;
     }
+    clearAdminValidation();
     const evidence = normalizeEvidence($('#admin-skill-evidence').value);
     $('#admin-skill-evidence').value = evidence;
     try {
       submit.disabled = true;
       submit.textContent = '正在上传...';
-      await window.DfwsCloud.uploadSkill(partner, { title: $('#admin-skill-title').value.trim(), description: buildAdminDescription(evidence), visibilityScope: $('#admin-skill-visibility').value }, file);
+      await window.DfwsCloud.uploadSkill(partner, { title: $('#admin-skill-title').value.trim(), description: buildAdminDescription(evidence), showcaseFile, visibilityScope: $('#admin-skill-visibility').value }, file);
       $('#admin-skill-dialog').close();
       toast('成果已提交，等待审核发布后自动入账');
       await load();
