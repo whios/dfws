@@ -6,7 +6,7 @@
   let activePartner = null;
   let resourceData = { resources: [], downloads: [], ratings: [] };
   let evaluationCampaigns = [];
-  let libraryFilters = { query: '', brand: '', type: '', sort: 'recent' };
+  let libraryFilters = { query: '', brand: '', department: '', type: '', sort: 'recent' };
   let submissionDraftTimer = null;
   let resubmittingResource = null;
   let restoredResubmissionId = null;
@@ -123,13 +123,16 @@
   }
   function renderLibraryControls(allResources, filteredResources) {
     const brands = [...new Set(allResources.map((resource) => resource.partners?.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    const departments = [...new Set(allResources.filter((resource) => !libraryFilters.brand || resource.partners?.brand === libraryFilters.brand).map((resource) => resource.partners?.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    if (libraryFilters.department && !departments.includes(libraryFilters.department)) libraryFilters.department = '';
     const types = [...new Set(allResources.map(resourceType).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
     const controls = $('#resource-library-controls');
-    controls.innerHTML = `<input id="resource-search" type="search" value="${esc(libraryFilters.query)}" placeholder="搜索成果、场景、伙伴或文件名，按回车搜索" /><label>品牌<select id="resource-brand-filter"><option value="">全部品牌</option>${brands.map((brand) => `<option value="${esc(brand)}" ${libraryFilters.brand === brand ? 'selected' : ''}>${esc(brand)}</option>`).join('')}</select></label><label>类别<select id="resource-type-filter"><option value="">全部类别</option>${types.map((type) => `<option value="${esc(type)}" ${libraryFilters.type === type ? 'selected' : ''}>${esc(type)}</option>`).join('')}</select></label><label>排序<select id="resource-sort"><option value="recent" ${libraryFilters.sort === 'recent' ? 'selected' : ''}>最近发布</option><option value="downloads" ${libraryFilters.sort === 'downloads' ? 'selected' : ''}>下载最多</option></select></label><span class="sub">当前显示 ${filteredResources.length} / ${allResources.length} 项</span>`;
+    controls.innerHTML = `<input id="resource-search" type="search" value="${esc(libraryFilters.query)}" placeholder="搜索成果、场景、伙伴或文件名，按回车搜索" /><label>品牌<select id="resource-brand-filter"><option value="">全部品牌</option>${brands.map((brand) => `<option value="${esc(brand)}" ${libraryFilters.brand === brand ? 'selected' : ''}>${esc(brand)}</option>`).join('')}</select></label><label>部门<select id="resource-department-filter" ${departments.length ? '' : 'disabled'}><option value="">全部部门</option>${departments.map((department) => `<option value="${esc(department)}" ${libraryFilters.department === department ? 'selected' : ''}>${esc(department)}</option>`).join('')}</select></label><label>类别<select id="resource-type-filter"><option value="">全部类别</option>${types.map((type) => `<option value="${esc(type)}" ${libraryFilters.type === type ? 'selected' : ''}>${esc(type)}</option>`).join('')}</select></label><label>排序<select id="resource-sort"><option value="recent" ${libraryFilters.sort === 'recent' ? 'selected' : ''}>最近发布</option><option value="downloads" ${libraryFilters.sort === 'downloads' ? 'selected' : ''}>下载最多</option></select></label><span class="sub">当前显示 ${filteredResources.length} / ${allResources.length} 项</span>`;
     const applySearch = (event) => { libraryFilters.query = event.target.value; renderResources(resourceData); };
     $('#resource-search').addEventListener('change', applySearch);
     $('#resource-search').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); applySearch(event); } });
-    $('#resource-brand-filter').addEventListener('change', (event) => { libraryFilters.brand = event.target.value; renderResources(resourceData); });
+    $('#resource-brand-filter').addEventListener('change', (event) => { libraryFilters.brand = event.target.value; libraryFilters.department = ''; renderResources(resourceData); });
+    $('#resource-department-filter').addEventListener('change', (event) => { libraryFilters.department = event.target.value; renderResources(resourceData); });
     $('#resource-type-filter').addEventListener('change', (event) => { libraryFilters.type = event.target.value; renderResources(resourceData); });
     $('#resource-sort').addEventListener('change', (event) => { libraryFilters.sort = event.target.value; renderResources(resourceData); });
   }
@@ -277,7 +280,7 @@
     const query = libraryFilters.query.trim().toLowerCase();
     const list = visibleResources.filter((resource) => {
       const text = `${resource.title || ''}${resource.file_name || ''}${resource.description || ''}${resource.partners?.owner_name || ''}${resource.partners?.brand || ''}`.toLowerCase();
-      return (!query || text.includes(query)) && (!libraryFilters.brand || resource.partners?.brand === libraryFilters.brand) && (!libraryFilters.type || resourceType(resource) === libraryFilters.type);
+      return (!query || text.includes(query)) && (!libraryFilters.brand || resource.partners?.brand === libraryFilters.brand) && (!libraryFilters.department || resource.partners?.department === libraryFilters.department) && (!libraryFilters.type || resourceType(resource) === libraryFilters.type);
     }).sort((left, right) => libraryFilters.sort === 'downloads' ? Number(right.download_count || 0) - Number(left.download_count || 0) || resourceTime(right) - resourceTime(left) : resourceTime(right) - resourceTime(left));
     $('#resource-count').textContent = `${visibleResources.length} 项可下载`;
     renderLibraryControls(visibleResources, list);

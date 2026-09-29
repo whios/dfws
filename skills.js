@@ -16,6 +16,7 @@ function skills() {
   let downloads = [];
   let evaluationSummaries = [];
   let editingSkillId = null;
+  let syncDepartmentFilter = () => {};
   // Dashboard drill-down can preset the review filters for this one visit.
   const initialFilters = window.DfwsSkillFilters || {};
   window.DfwsSkillFilters = null;
@@ -32,7 +33,7 @@ function skills() {
     const label = line.replace(url, '').replace(/[|｜：:－—-]+\s*$/, '').trim() || url;
     return `<a class="action-link" href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`;
   }).filter(Boolean).join('') || '<span class="sub">未填写</span>';
-  view.innerHTML = `<div class="toolbar"><div><strong>${isLeader ? '成果进度总览' : '成果审核'}</strong><div class="sub">${isLeader ? '查看全公司成果提交、发布状态和下载明细；不包含审核操作或文件下载。' : hasBrandScope ? (scopedBrand ? `可审核 ${esc(scopedBrand)} 品牌成果；其他品牌全员可见成果仅可查看和下载。` : '当前账号尚未绑定品牌，无法审核成果。') : '所有新成果在此提交；发布后自动写入资产台账。'}</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill" ${!canReview || (hasBrandScope && !scopedBrand) ? 'disabled hidden' : ''}>管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载成果数据...</span></div><article class="card reuse-ranking" ${canViewDownloadDetails ? '' : 'hidden'}><div class="section-head"><div><h2>成果复用榜</h2><p>按去重下载人数排序，下载仅代表获取文件，不等同于实际使用。</p></div><label class="sub">排行口径 <select id="reuse-ranking-mode"><option value="month">近 30 天最受复用</option><option value="total">累计下载最多</option><option value="recent">最近有新下载</option></select></label></div><div class="table-wrap"><table class="table"><thead><tr><th>排名</th><th>成果</th><th>归属伙伴</th><th>下载人数</th><th>下载次数</th><th>最近下载</th></tr></thead><tbody id="reuse-ranking-body"><tr><td colspan="6" class="empty">正在统计下载数据...</td></tr></tbody></table></div></article><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card" ${canViewDownloadDetails ? '' : 'hidden'}><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载伙伴</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
+  view.innerHTML = `<div class="toolbar"><div><strong>${isLeader ? '成果进度总览' : '成果审核'}</strong><div class="sub">${isLeader ? '查看全公司成果提交、发布状态和下载明细；不包含审核操作或文件下载。' : hasBrandScope ? (scopedBrand ? `可审核 ${esc(scopedBrand)} 品牌成果；其他品牌全员可见成果仅可查看和下载。` : '当前账号尚未绑定品牌，无法审核成果。') : '所有新成果在此提交；发布后自动写入资产台账。'}</div></div><span style="flex:1"></span><button class="button secondary" id="refresh-skills">刷新</button><button class="button primary" id="add-admin-skill" ${!canReview || (hasBrandScope && !scopedBrand) ? 'disabled hidden' : ''}>管理员提交成果</button></div><div class="toolbar" aria-label="成果审核筛选"><input id="skill-search" placeholder="搜索成果、提交伙伴或文件名" /><label>品牌 <select id="skill-brand"><option value="">全部品牌</option></select></label><label>部门 <select id="skill-department"><option value="">全部部门</option></select></label><label>审核状态 <select id="skill-review-type"><option value="">全部状态</option>${statusOptions.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><span class="sub" id="skill-filter-count">正在加载成果...</span></div><div id="skill-library-summary" class="skill-library-summary"><span class="sub">正在加载成果数据...</span></div><article class="card reuse-ranking" ${canViewDownloadDetails ? '' : 'hidden'}><div class="section-head"><div><h2>成果复用榜</h2><p>按去重下载人数排序，下载仅代表获取文件，不等同于实际使用。</p></div><label class="sub">排行口径 <select id="reuse-ranking-mode"><option value="month">近 30 天最受复用</option><option value="total">累计下载最多</option><option value="recent">最近有新下载</option></select></label></div><div class="table-wrap"><table class="table"><thead><tr><th>排名</th><th>成果</th><th>归属伙伴</th><th>下载人数</th><th>下载次数</th><th>最近下载</th></tr></thead><tbody id="reuse-ranking-body"><tr><td colspan="6" class="empty">正在统计下载数据...</td></tr></tbody></table></div></article><div id="skill-card-grid" class="skill-card-grid"><div class="empty">正在加载成果...</div></div><article class="card" ${canViewDownloadDetails ? '' : 'hidden'}><div class="section-head"><div><h2>下载明细</h2><p>仅记录从本站点击“下载文件”的行为</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>成果</th><th>下载伙伴</th><th>下载时间</th></tr></thead><tbody id="download-body"><tr><td colspan="3" class="empty">正在加载下载记录...</td></tr></tbody></table></div></article>`;
   view.querySelector('.toolbar strong').textContent = isLeader ? '成果进度总览' : '成果审核与发布';
   view.querySelector('#add-admin-skill').textContent = '管理员代提交成果';
   view.querySelectorAll('.toolbar')[1].setAttribute('aria-label', isLeader ? '成果进度筛选' : '成果审核与发布筛选');
@@ -42,9 +43,10 @@ function skills() {
   view.querySelector('#reuse-ranking-body').innerHTML = '<tr><td colspan="6" class="empty">正在统计下载数据...</td></tr>';
   const renderRanking = () => {
     const brand = $('#skill-brand').value;
+    const department = $('#skill-department').value;
     const mode = $('#reuse-ranking-mode').value;
     const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const byId = new Map(resources.filter((resource) => resource.status === 'published' && (!brand || resource.partners?.brand === brand)).map((resource) => [resource.id, { resource, events: [] }]));
+    const byId = new Map(resources.filter((resource) => resource.status === 'published' && (!brand || resource.partners?.brand === brand) && (!department || resource.partners?.department === department)).map((resource) => [resource.id, { resource, events: [] }]));
     downloads.forEach((item) => {
       const row = byId.get(item.resource_id);
       if (row) row.events.push(item);
@@ -59,10 +61,11 @@ function skills() {
   const render = () => {
     const query = $('#skill-search').value.trim().toLowerCase();
     const brand = $('#skill-brand').value;
+    const department = $('#skill-department').value;
     const status = $('#skill-review-type').value;
     const filtered = resources.filter((resource) => {
       const text = `${resource.title || ''}${resource.file_name || ''}${resource.description || ''}${resource.partners?.owner_name || ''}${resource.partners?.brand || ''}`.toLowerCase();
-      return (!query || text.includes(query)) && (!brand || resource.partners?.brand === brand) && (!status || resource.status === status) && (!initialFilters.resourceId || resource.id === initialFilters.resourceId);
+      return (!query || text.includes(query)) && (!brand || resource.partners?.brand === brand) && (!department || resource.partners?.department === department) && (!status || resource.status === status) && (!initialFilters.resourceId || resource.id === initialFilters.resourceId);
     });
     const published = resources.filter((resource) => resource.status === 'published').length;
     const evaluationsByResource = new Map(evaluationSummaries.map((item) => [item.resource_id, item]));
@@ -114,6 +117,7 @@ function skills() {
     try {
       const [data, partnerRows, downloadRows] = await Promise.all([window.DfwsCloud.listSkillResources(), canReview ? window.DfwsCloud.listSkillPartners() : Promise.resolve([]), canViewDownloadDetails ? window.DfwsCloud.listSkillDownloads() : Promise.resolve([])]);
       const selectedBrand = initialFilters.brand ?? $('#skill-brand').value;
+      const selectedDepartment = $('#skill-department').value;
       const selectedStatus = initialFilters.status ?? $('#skill-review-type').value;
       resources = data.resources;
       evaluationSummaries = await window.DfwsCloud.listSkillEvaluationCampaigns(resources).catch(() => []);
@@ -123,6 +127,17 @@ function skills() {
       $('#skill-brand').innerHTML = `<option value="">全部品牌</option>${brands.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}`;
       $('#skill-brand').value = brands.includes(selectedBrand) ? selectedBrand : '';
       $('#skill-brand').disabled = false;
+      let departmentInitialized = false;
+      syncDepartmentFilter = () => {
+        const brand = $('#skill-brand').value;
+        const departments = [...new Set(resources.filter((resource) => !brand || resource.partners?.brand === brand).map((resource) => resource.partners?.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+        const current = departmentInitialized ? $('#skill-department').value : selectedDepartment;
+        $('#skill-department').innerHTML = `<option value="">全部部门</option>${departments.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}`;
+        $('#skill-department').value = departments.includes(current) ? current : '';
+        $('#skill-department').disabled = !departments.length;
+        departmentInitialized = true;
+      };
+      syncDepartmentFilter();
       $('#skill-review-type').value = statusOptions.some(([value]) => value === selectedStatus) ? selectedStatus : '';
       render();
       const titles = new Map(resources.map((resource) => [resource.id, resource.title]));
@@ -196,7 +211,8 @@ function skills() {
     clearAdminValidation();
     $('#admin-skill-dialog').showModal();
   };
-  ['skill-search', 'skill-brand', 'skill-review-type'].forEach((id) => $('#'+id).addEventListener(id === 'skill-search' ? 'input' : 'change', render));
+  $('#skill-brand').addEventListener('change', () => { syncDepartmentFilter(); render(); });
+  ['skill-search', 'skill-department', 'skill-review-type'].forEach((id) => $('#'+id).addEventListener(id === 'skill-search' ? 'input' : 'change', render));
   $('#reuse-ranking-mode').addEventListener('change', renderRanking);
   $('#skill-library-summary').onclick = (event) => {
     if (!event.target.closest('[data-filter-published]')) return;
