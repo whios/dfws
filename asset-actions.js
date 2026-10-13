@@ -32,7 +32,7 @@
       [...body.querySelectorAll('tr')].forEach((row, index) => {
         const asset = visible[index];
         if (!asset?.resourceId) return;
-        const statusCell = row.cells[8];
+        const statusCell = row.cells[7];
         if (statusCell && row.dataset.unifiedStatus !== asset.status) {
           row.dataset.unifiedStatus = asset.status;
           statusCell.innerHTML = `<span class="badge ${asset.sourceStatus === 'published' ? 'v3' : asset.sourceStatus === 'rejected' ? 'high' : asset.sourceStatus === 'archived' ? 'v0' : 'v1'}">${esc(asset.status)}</span><br><span class="sub">同步自成果审核</span>`;
