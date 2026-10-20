@@ -37,6 +37,7 @@ jobs:
           node --check api/staff/list-skill-downloads.js
           node --check api/staff/list-profiles.js
           node --check api/staff/list-brand-review-progress.js
+          node --check api/staff/set-account-status.js
 
       - name: Package application files
         uses: actions/upload-artifact@v4
