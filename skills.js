@@ -21,6 +21,10 @@ function skills() {
   const initialFilters = window.DfwsSkillFilters || {};
   window.DfwsSkillFilters = null;
   const formatSize = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  const formatDateTime = (value) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '未知时间' : date.toLocaleString('zh-CN', { hour12: false });
+  };
   const extract = (description, label) => {
     const matched = String(description || '').match(new RegExp(`(?:^|\\n\\n)${label}：([\\s\\S]*?)(?=\\n\\n[^：]+：|$)`));
     return matched?.[1]?.trim() || '';
@@ -105,6 +109,22 @@ function skills() {
       if (!canManageResource(resource) || resource?.status !== 'published') return;
       card.querySelector('.skill-card-actions')?.insertAdjacentHTML('beforeend', `<button class="button secondary" data-create-evaluation="${resource.id}">发送评价</button>`);
     });
+    if (canViewDownloadDetails) {
+      $$('.skill-library-card').forEach((card, index) => {
+        const resource = filtered[index];
+        if (!resource) return;
+        const records = downloads.filter((item) => item.resource_id === resource.id);
+        const actions = card.querySelector('.skill-card-actions, .skill-card-readonly');
+        if (!actions) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'button secondary';
+        button.dataset.viewDownloads = resource.id;
+        button.textContent = `下载明细（${records.length}）`;
+        actions.append(button);
+        if (!canReview) card.querySelector('.skill-card-meta span:last-child')?.append(` · 已下载 ${records.length} 次`);
+      });
+    }
     renderRanking();
   };
   const openEdit = (resource) => {
@@ -112,6 +132,14 @@ function skills() {
     $('#skill-edit-title').value = resource.title || '';
     $('#skill-edit-description').value = resource.description || '';
     $('#skill-edit-dialog').showModal();
+  };
+  const openDownloadDetails = (resource) => {
+    const records = downloads.filter((item) => item.resource_id === resource.id);
+    const uniquePartners = new Set(records.map((item) => item.downloaded_by).filter(Boolean)).size;
+    $('#skill-download-dialog-title').textContent = `${resource.title || '未命名成果'} · 下载明细`;
+    $('#skill-download-dialog-summary').textContent = `累计 ${records.length} 次下载，${uniquePartners} 位伙伴下载过。`;
+    $('#skill-download-dialog-body').innerHTML = records.map((item) => `<tr><td><strong>${esc(item.downloader || '未知账号')}</strong></td><td>${formatDateTime(item.downloaded_at)}</td></tr>`).join('') || '<tr><td colspan="2" class="empty">暂未有下载记录</td></tr>';
+    $('#skill-download-dialog').showModal();
   };
   const load = async () => {
     try {
@@ -220,6 +248,12 @@ function skills() {
     render();
   };
   $('#skill-card-grid').onclick = async (event) => {
+    const detailButton = event.target.closest('[data-view-downloads]');
+    if (detailButton) {
+      const resource = resources.find((item) => item.id === detailButton.dataset.viewDownloads);
+      if (resource) openDownloadDetails(resource);
+      return;
+    }
     const evaluationId = event.target.dataset.createEvaluation;
     if (evaluationId) {
       const resource = resources.find((item) => item.id === evaluationId);

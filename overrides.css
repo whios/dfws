@@ -230,6 +230,12 @@ a.nav-item { text-decoration: none; }
 .skill-card-actions { align-items: flex-end; border-top: 1px solid var(--line); flex-wrap: wrap; padding-top: 11px; }
 .skill-card-actions select { border: 1px solid var(--line); border-radius: 5px; font: inherit; max-width: 132px; padding: 6px; }
 .skill-card-actions .button { padding: 7px 9px; }
+.skill-card-readonly { align-items: center; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; padding-top: 11px; }
+.skill-card-readonly > span { color: var(--muted); font-size: 12px; margin-right: auto; }
+.skill-download-dialog { width: min(680px, calc(100vw - 28px)); }
+.skill-download-dialog .table { min-width: 0; }
+.skill-download-dialog .table-wrap { margin-top: 16px; }
+.skill-download-dialog .empty { padding: 30px 12px; }
 .skill-card-note { border: 1px solid var(--line); border-radius: 5px; font: inherit; min-height: 54px; padding: 7px; resize: vertical; width: 100%; }
 .skill-evidence-link { max-width: 100%; overflow-wrap: anywhere; width: fit-content; word-break: break-word; }
 .skill-showcase { background: #f7fbfa; border-left: 3px solid #91c8c0; display: grid; gap: 6px; min-width: 0; padding: 9px 10px; }
