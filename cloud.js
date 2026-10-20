@@ -52,8 +52,16 @@
   const writeLocalList = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 
   async function getProfile(user) {
-    const { data, error } = await client.from('profiles').select('id, email, display_name, role, partner_id, partners(brand)').eq('id', user.id).single();
+    const { data, error } = await client.from('profiles').select('id, email, display_name, role, partner_id, account_status, partners(brand)').eq('id', user.id).single();
     if (error) throw error;
+    if (data.account_status === 'disabled') {
+      await client.auth.signOut();
+      profile = null;
+      showLogin(true);
+      document.querySelector('#auth-message').textContent = '该账号已停用，请联系 AI 应用官或负责人。';
+      status('账号已停用');
+      return false;
+    }
     const linkedPartner = Array.isArray(data.partners) ? data.partners[0] : data.partners;
     profile = { ...data, management_brand: linkedPartner?.brand || null };
     document.querySelector('[data-view="permissions"]')?.toggleAttribute('hidden', !personnelAdmin());
@@ -62,6 +70,7 @@
     const accountState = document.querySelector('#account-state');
     if (accountState) accountState.textContent = `${data.display_name || data.email} · ${roleLabel(data.role)}`;
     status('已连接云端');
+    return true;
   }
 
   async function loadState() {
@@ -167,7 +176,7 @@
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       submit.disabled = false;
       if (error || !data.session) { document.querySelector('#auth-message').textContent = '登录名或密码错误'; return; }
-      await getProfile(data.user);
+      if (!(await getProfile(data.user))) return;
       const partnerPage = document.body.classList.contains('self-review-page');
       if (profile?.role === 'partner' && !partnerPage) { window.location.replace('self-review.html'); return; }
       if (profile?.role !== 'partner' && partnerPage) { window.location.replace('index.html'); return; }
@@ -194,7 +203,7 @@
       return null;
     }
     if (!session) { showLogin(true); status('请登录后连接云端'); return null; }
-    await getProfile(session.user);
+    if (!(await getProfile(session.user))) return null;
     // 伙伴账号和管理端各自进入对应入口，避免越权浏览或误入错误页面。
     if (!document.body.classList.contains('self-review-page') && profile?.role === 'partner') {
       window.location.replace('self-review.html');
@@ -262,6 +271,21 @@
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || '人员信息未保存，请刷新后重试。');
+    return result;
+  }
+  async function setAccountStatus(id, action) {
+    requireWritable();
+    if (!personnelAdmin()) throw new Error('仅 AI 应用官和负责人可以管理人员权限。');
+    if (['localhost', '127.0.0.1'].includes(window.location.hostname)) throw new Error('本地预览不保存账户状态，请使用正式管理端操作。');
+    if (!['disable', 'restore'].includes(action)) throw new Error('账户操作无效。');
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error('登录状态已失效，请重新登录。');
+    const response = await fetch('/api/staff/set-account-status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ profileId: id, action })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '账户状态更新失败。');
     return result;
   }
   async function deleteAsset(id) {
@@ -700,5 +724,5 @@
   }
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
-  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, listSkillDownloads, uploadSkill, resubmitSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
+  window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, setAccountStatus, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, listSkillDownloads, uploadSkill, resubmitSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
 })();

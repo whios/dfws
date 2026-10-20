@@ -24,11 +24,11 @@ export default async function handler(request, response) {
     const token = String(request.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!token) return reply(response, 401, { error: '请先登录后查看人员权限。' });
     const currentUser = await supabaseFetch('/auth/v1/user', { headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } });
-    const actorRows = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}&select=role`, { headers: serviceHeaders() });
-    if (!staffRoles.has(actorRows?.[0]?.role)) return reply(response, 403, { error: '当前账号没有人员权限管理权限。' });
+    const actorRows = await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}&select=role,account_status`, { headers: serviceHeaders() });
+    if (!staffRoles.has(actorRows?.[0]?.role) || actorRows?.[0]?.account_status === 'disabled') return reply(response, 403, { error: '当前账号没有人员权限管理权限。' });
 
     const [profiles, partners] = await Promise.all([
-      supabaseFetch('/rest/v1/profiles?select=id,email,display_name,role,partner_id,created_at&order=created_at.asc', { headers: serviceHeaders() }),
+      supabaseFetch('/rest/v1/profiles?select=id,email,display_name,role,partner_id,account_status,created_at&order=created_at.asc', { headers: serviceHeaders() }),
       supabaseFetch('/rest/v1/partners?select=id,owner_name,brand,department&order=brand.asc,owner_name.asc', { headers: serviceHeaders() })
     ]);
     return reply(response, 200, { profiles: profiles || [], partners: partners || [] });

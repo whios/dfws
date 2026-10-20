@@ -162,7 +162,8 @@ function permissions() {
       $('#person-brand').innerHTML = brands.map((brand) => `<option value="${esc(brand)}">${esc(brand)}</option>`).join('');
       const bound = data.profiles.filter((profile) => profile.partner_id).length;
       const conflicts = [...bindingCounts.values()].filter((count) => count > 1).length;
-      $('#permission-kpis').innerHTML = [['账号总数', data.profiles.length, '已进入系统的账号'], ['已绑定', bound, '已关联伙伴记录'], ['待绑定', data.profiles.length - bound, '需补齐伙伴关系'], ['绑定冲突', conflicts, '同一伙伴被多账号绑定']].map(([label, value, hint]) => `<article class="card permission-kpi"><span>${label}</span><strong>${value}</strong><small>${hint}</small></article>`).join('');
+      const disabled = data.profiles.filter((profile) => profile.account_status === 'disabled').length;
+      $('#permission-kpis').innerHTML = [['账号总数', data.profiles.length, '已进入系统的账号'], ['已绑定', bound, '已关联伙伴记录'], ['待绑定', data.profiles.length - bound, '需补齐伙伴关系'], ['已停用', disabled, '无法继续登录']].map(([label, value, hint]) => `<article class="card permission-kpi"><span>${label}</span><strong>${value}</strong><small>${hint}</small></article>`).join('');
       const render = () => {
         const query = $('#profile-search').value.trim().toLowerCase();
         const brand = $('#profile-brand').value;
@@ -178,7 +179,12 @@ function permissions() {
           const conflict = profile.partner_id && bindingCounts.get(profile.partner_id) > 1;
           const status = conflict ? '绑定冲突' : profile.partner_id ? '已绑定' : '待绑定';
           const partnerLabel = profile.partner ? `${profile.partner.owner_name} · ${profile.partner.brand} · ${profile.partner.department}` : '未绑定伙伴';
-          return `<tr><td><strong>${esc(profile.display_name || '未命名')}</strong><br><span class="sub">${esc(profile.email)}</span></td><td>${profile.partner ? `${esc(profile.partner.brand)}<br><span class="sub">${esc(profile.partner.department)}</span>` : '<span class="sub">未关联</span>'}</td><td><select data-role="${profile.id}">${roles.map(([value, label]) => `<option value="${value}" ${profile.role === value ? 'selected' : ''}>${label}</option>`).join('')}</select></td><td><input type="hidden" data-partner="${profile.id}" value="${esc(profile.partner_id || '')}" /><span class="partner-binding" data-partner-label="${profile.id}">${esc(partnerLabel)}</span><div class="partner-binding-actions"><button class="action-link" data-pick-partner="${profile.id}">选择伙伴</button>${profile.partner_id ? `<button class="action-link muted-action" data-clear-partner="${profile.id}">取消绑定</button>` : `<button class="action-link" data-create-partner-binding="${profile.id}">补建伙伴并绑定</button>`}<button class="button primary permission-save" data-save-profile="${profile.id}">保存更改</button></div></td><td><span class="badge ${conflict ? 'high' : profile.partner_id ? 'v3' : 'v0'}">${status}</span><br><span class="sub">${roleName.get(profile.role) || '未设置角色'}</span></td><td><button class="action-link" data-edit-person="${profile.id}">编辑人员</button><br><button class="action-link" data-send-password-setup="${profile.id}">重新发送设置密码邮件</button></td></tr>`;
+          const isDisabled = profile.account_status === 'disabled';
+          const accountStatus = isDisabled ? '<span class="badge high">已停用</span>' : '<span class="badge v3">正常</span>';
+          const accountAction = isDisabled
+            ? `<button class="action-link" data-restore-account="${profile.id}">恢复账户</button>`
+            : `<button class="action-link muted-action" data-disable-account="${profile.id}">停用账户</button>`;
+          return `<tr><td><strong>${esc(profile.display_name || '未命名')}</strong><br><span class="sub">${esc(profile.email)}</span></td><td>${profile.partner ? `${esc(profile.partner.brand)}<br><span class="sub">${esc(profile.partner.department)}</span>` : '<span class="sub">未关联</span>'}</td><td><select data-role="${profile.id}" ${isDisabled ? 'disabled' : ''}>${roles.map(([value, label]) => `<option value="${value}" ${profile.role === value ? 'selected' : ''}>${label}</option>`).join('')}</select></td><td><input type="hidden" data-partner="${profile.id}" value="${esc(profile.partner_id || '')}" /><span class="partner-binding" data-partner-label="${profile.id}">${esc(partnerLabel)}</span><div class="partner-binding-actions"><button class="action-link" data-pick-partner="${profile.id}" ${isDisabled ? 'disabled' : ''}>选择伙伴</button>${profile.partner_id ? `<button class="action-link muted-action" data-clear-partner="${profile.id}" ${isDisabled ? 'disabled' : ''}>取消绑定</button>` : `<button class="action-link" data-create-partner-binding="${profile.id}" ${isDisabled ? 'disabled' : ''}>补建伙伴并绑定</button>`}<button class="button primary permission-save" data-save-profile="${profile.id}" ${isDisabled ? 'disabled' : ''}>保存更改</button></div></td><td>${accountStatus}<br><span class="badge ${conflict ? 'high' : profile.partner_id ? 'v3' : 'v0'}">${status}</span><br><span class="sub">${roleName.get(profile.role) || '未设置角色'}</span></td><td><button class="action-link" data-edit-person="${profile.id}" ${isDisabled ? 'disabled' : ''}>编辑人员</button><br>${isDisabled ? '<span class="sub">停用中不可发送邮件</span>' : `<button class="action-link" data-send-password-setup="${profile.id}">重新发送设置密码邮件</button>`}<br>${accountAction}</td></tr>`;
         }).join('') || '<tr><td colspan="6" class="empty">未找到匹配账号</td></tr>';
       };
       const renderPicker = () => {
@@ -234,6 +240,29 @@ function permissions() {
           try { event.target.disabled = true; event.target.textContent = '正在发送...'; const result = await window.DfwsCloud.sendPasswordSetupEmail(passwordSetupProfile); toast(result.message || '设置密码邮件已发送'); }
           catch (error) { toast(error.message || '设置密码邮件发送失败'); }
           finally { event.target.disabled = false; event.target.textContent = '重新发送设置密码邮件'; }
+          return;
+        }
+        const accountActionProfile = event.target.dataset.disableAccount || event.target.dataset.restoreAccount;
+        if (accountActionProfile) {
+          const profile = data.profiles.find((item) => item.id === accountActionProfile);
+          const action = event.target.dataset.disableAccount ? 'disable' : 'restore';
+          if (!profile) return;
+          const verb = action === 'disable' ? '停用' : '恢复';
+          const prompt = action === 'disable'
+            ? `确认停用 ${profile.display_name || profile.email} 的账户？该人员将无法继续登录，恢复后才能重新使用。`
+            : `确认恢复 ${profile.display_name || profile.email} 的账户？恢复后该人员可使用原账号登录。`;
+          if (!confirm(prompt)) return;
+          try {
+            event.target.disabled = true;
+            event.target.textContent = `${verb}中...`;
+            const result = await window.DfwsCloud.setAccountStatus(profile.id, action);
+            toast(result.message || `账户已${verb}`);
+            await load();
+          } catch (error) {
+            toast(error.message || `账户${verb}失败`);
+            event.target.disabled = false;
+            event.target.textContent = action === 'disable' ? '停用账户' : '恢复账户';
+          }
           return;
         }
         const saveProfile = event.target.dataset.saveProfile;
