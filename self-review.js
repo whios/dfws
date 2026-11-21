@@ -10,6 +10,16 @@
   let submissionDraftTimer = null;
   let resubmittingResource = null;
   let restoredResubmissionId = null;
+  let versionState = { available: false, versions: [] };
+  function syncVersionForm() {
+    const active = resubmittingResource?.status === 'published';
+    $('#skill-version-fields').hidden = !active;
+    $('#skill-change-note').required = active;
+    $('#self-review-form [type="submit"]').textContent = active ? '提交新版本审核' : resubmittingResource ? '保存修改并重新提交' : '提交成果审核';
+    const blocked = active && (!versionState.available || versionState.versions.some(v => v.resource_id === resubmittingResource.id && v.status === 'pending'));
+    $('#self-review-form [type="submit"]').disabled = Boolean(blocked);
+    if (blocked) $('#form-message').textContent = '该成果已有版本待审核，或版本服务尚未启用。已保留草稿，请审核后再修改，或取消本次更新。';
+  }
 
   function esc(value = '') { return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
   function formatSize(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))}KB` : `${(bytes / 1024 / 1024).toFixed(1)}MB`; }
@@ -39,6 +49,7 @@
       evidence: $('#evidence-url').value,
       guideInEvidence: $('#skill-guide-in-evidence').checked,
       resubmissionId: resubmittingResource?.id || restoredResubmissionId,
+      changeNote: $('#skill-change-note').value,
       updatedAt: new Date().toISOString()
     };
   }
@@ -88,6 +99,7 @@
     $('#evidence-url').value = draft.evidence || '';
     $('#skill-guide-in-evidence').checked = Boolean(draft.guideInEvidence);
     restoredResubmissionId = typeof draft.resubmissionId === 'string' ? draft.resubmissionId : null;
+    $('#skill-change-note').value = draft.changeNote || '';
     syncOtherEffectField();
     $('#skill-file-status').textContent = '草稿已恢复。请重新选择 Skill 文件包后再提交。';
     $('#skill-showcase-file-status').textContent = '草稿已恢复；如有展示附件，请重新选择文件';
@@ -204,6 +216,15 @@
       const evaluationSummary = evaluation ? `<div class="submission-evaluation"><strong>伙伴应用效果评价</strong><span>已评价 ${evaluation.response_count} / ${evaluation.target_count} 人 · 提效 ${evaluation.efficiency_count} 人 · 提质 ${evaluation.quality_count} 人 · 暂无明显效果 ${evaluation.no_effect_count} 人</span></div>` : '';
       return `<article class="submission-card"><div><h3>${esc(resource.title)}</h3><p>${esc(resource.file_name)} · 提交于 ${new Date(resource.created_at).toLocaleString('zh-CN', { hour12: false })}</p>${returnedNote}${publishedNote}${evaluationSummary}</div><div class="submission-side"><span class="submission-status ${esc(resource.status)}">${reviewStatusLabel(resource.status)}</span>${resource.status === 'rejected' ? `<button class="button secondary" data-resubmit="${resource.id}">重新提交</button>` : ''}</div></article>`;
     }).join('') : '<p class="empty">你还没有提交成果。完成提交后，审核进度会显示在这里。</p>';
+    for (const [index, card] of [...$('#submission-list').querySelectorAll('.submission-card')].entries()) {
+      const resource = ownResources[index];
+      const versions = versionState.versions.filter(v => v.resource_id === resource.id);
+      if (resource.status === 'published' && versionState.available) {
+        const pending = versions.some(v => v.status === 'pending');
+        card.querySelector('.submission-side').insertAdjacentHTML('beforeend', `<span>当前 v${Number(resource.version_number || 1)}</span><button type="button" class="button secondary" data-resubmit="${resource.id}" ${pending ? 'disabled' : ''}>${pending ? '新版本待审核' : '提交新版本'}</button>`);
+      }
+      if (versions.length) card.querySelector('div').insertAdjacentHTML('beforeend', `<details><summary>版本记录（${versions.length}）</summary>${versions.map(v => `<p>v${Number(v.version_number)} · ${reviewStatusLabel(v.status)} · ${new Date(v.submitted_at).toLocaleDateString('zh-CN')}<br>${esc(v.change_note)}${v.review_note ? `<br>审核意见：${esc(v.review_note)}` : ''}</p>`).join('')}</details>`);
+    }
   }
   function ensureEvaluationDialog() {
     if ($('#skill-evaluation-dialog')) return;
@@ -299,6 +320,7 @@
       const showcaseDetail = fields.showcaseLinks || fields.showcaseNote || fields.showcasePath ? `<div class="resource-detail resource-showcase"><strong>应用成果展示</strong>${showcaseLinksView(fields.showcaseLinks)}${fields.showcaseNote ? `<span>${esc(fields.showcaseNote)}</span>` : ''}${fields.showcasePath ? `<button class="action-link" data-download-showcase="${resource.id}">下载：${esc(fields.showcaseFileName || '展示附件')}</button>` : ''}</div>` : '';
       return `<article class="resource-card"><div class="resource-card-head"><div><div class="resource-card-title"><h3>${esc(resource.title)}</h3><span class="resource-type">${esc(fields.type || '未分类')}</span></div><span class="resource-meta">${esc(partner?.owner_name || '未关联伙伴')} · ${esc(partner?.brand || '未填写品牌')} · ${esc(resource.file_name)}</span><span class="visibility-tag ${resource.visibility_scope === 'brand_only' ? 'brand-only' : ''}">${esc(visibilityLabel(resource.visibility_scope, partner?.brand))}</span></div><div class="resource-download"><span class="sub">已下载 ${resource.download_count} 次</span><div class="resource-download-actions"><button class="button secondary" data-download="${resource.id}">下载文件</button>${showcaseFile}</div></div></div><p class="resource-card-summary">${esc(fields.scenario || '未填写适用场景')}</p><details class="resource-details"><summary>查看使用说明、应用效果与操作步骤</summary><div class="resource-detail-grid">${detail('成果类型', fields.type)}${detail('适用场景', fields.scenario)}${showcaseDetail}${detail('效果类型（伙伴自评）', fields.effectTypes)}${detail('其他效果说明', fields.effectOther)}${detail('个人效果评估', fields.effectRating)}${detail('使用前后变化', fields.effectChange)}${detail('测算依据', fields.effectEvidence)}${detail('后续优化方向', fields.effectNext)}${detail('使用前准备', fields.input)}${detail('使用结果', fields.output)}${detail('使用步骤', fields.steps)}${detail('使用限制与数据权限', fields.guardrails)}<div class="resource-detail resource-evidence"><strong>操作步骤链接</strong>${evidenceView}</div></div></details></article>`;
     }).join('') : '<p class="empty">当前筛选条件下没有可下载成果。</p>';
+    document.querySelectorAll('#resource-list .resource-meta').forEach((element, index) => { element.append(` · v${Number(list[index].version_number || 1)}`); });
     document.querySelectorAll('.resource-details summary').forEach((summary) => { summary.textContent = '查看使用说明、应用效果与操作步骤'; });
     document.querySelectorAll('.resource-evidence strong').forEach((label) => { label.textContent = '操作步骤链接'; });
     $('#resource-list').onclick = async (event) => {
@@ -340,16 +362,19 @@
   async function loadResources() {
     try {
       const resources = await window.DfwsCloud.listSkillResources();
+      versionState = await window.DfwsVersions.list();
       const ratings = await window.DfwsCloud.listSkillRatingSummaries(resources.resources).catch((error) => { console.warn('评分数据加载失败', error); return []; });
       resourceData = { ...resources, ratings };
       if (restoredResubmissionId) {
-        const resource = resourceData.resources.find((item) => item.id === restoredResubmissionId && item.uploaded_by === window.DfwsCloud.profile?.id && item.status === 'rejected');
+        const resource = resourceData.resources.find((item) => item.id === restoredResubmissionId && item.uploaded_by === window.DfwsCloud.profile?.id && ['rejected','published'].includes(item.status));
         if (resource) {
-          resubmittingResource = resource;
+          const latest = versionState.versions.find(v => v.resource_id === resource.id);
+          resubmittingResource = resource.status === 'published' && latest?.status === 'rejected' && latest.version_number === Number(resource.version_number || 1) + 1 ? { ...resource, ...latest.payload } : resource;
           $('#self-review-form [type="submit"]').textContent = '保存修改并重新提交';
-          $('#skill-file-status').textContent = resource.file_name ? `原 Skill 文件包已保留：${resource.file_name}。本次不选择新文件将继续使用原文件；如需替换，请重新选择。` : '请重新选择 Skill 文件包。';
+          $('#skill-file-status').textContent = resubmittingResource.file_name ? `已保留文件：${resubmittingResource.file_name}。不选新文件将继续使用此文件。` : '请重新选择 Skill 文件包。';
         }
         restoredResubmissionId = null;
+        syncVersionForm();
       }
       evaluationCampaigns = await window.DfwsCloud.listSkillEvaluationCampaigns(resourceData.resources).catch(() => evaluationCampaigns);
       renderResources(resourceData);
@@ -389,13 +414,18 @@
     const id = event.target.dataset.resubmit;
     if (!id) return;
     const resource = resourceData.resources.find((item) => item.id === id);
-    if (!resource || resource.status !== 'rejected') return;
-    const fields = parseResourceDescription(resource?.description);
-    resubmittingResource = resource;
+    if (!resource || !['rejected','published'].includes(resource.status) || resource.uploaded_by !== window.DfwsCloud.profile?.id) return;
+    if (resource.status === 'published' && (!versionState.available || versionState.versions.some(v => v.resource_id === resource.id && v.status === 'pending'))) return;
+    const latest = versionState.versions.find(v => v.resource_id === id);
+    const original = resource;
+    // A returned proposal is editable; the released resource itself stays intact.
+    const editing = resource.status === 'published' && latest?.status === 'rejected' && latest.version_number === Number(resource.version_number || 1) + 1 ? { ...resource, ...latest.payload } : resource;
+    const fields = parseResourceDescription(editing.description);
+    resubmittingResource = editing;
     showPartnerView('submit');
-    $('#skill-title').value = resource.title || '';
+    $('#skill-title').value = editing.title || '';
     $('#skill-type').value = fields.type || 'Skill';
-    $('#skill-visibility').value = resource?.visibility_scope || 'all_partners';
+    $('#skill-visibility').value = editing.visibility_scope || 'all_partners';
     $('#skill-scenario').value = fields.scenario || '';
     $('#skill-showcase-links').value = fields.showcaseLinks || '';
     $('#skill-showcase-note').value = fields.showcaseNote || '';
@@ -414,11 +444,24 @@
     $('#evidence-url').value = fields.evidence || '';
     $('#skill-tested').checked = false;
     $('#skill-file').value = '';
-    $('#skill-file-status').textContent = resource.file_name ? `原 Skill 文件包已保留：${resource.file_name}。本次不选择新文件将继续使用原文件；如需替换，请重新选择。` : '请重新选择 Skill 文件包。';
+    $('#skill-file-status').textContent = editing.file_name ? `已保留文件：${editing.file_name}。本次不选择新文件将继续使用此文件；如需替换，请重新选择。` : '请重新选择 Skill 文件包。';
     $('#form-message').textContent = '已带回原提交内容。请按审核说明修改，保存后将更新原成果并重新进入审核。';
     $('#self-review-form [type="submit"]').textContent = '保存修改并重新提交';
+    $('#skill-change-note').value = editing !== original ? latest.change_note : '';
+    if (resource.status === 'published') $('#form-message').textContent = '更新后请重新试用。新版本审核期间，旧版仍在成果库提供下载。';
+    syncVersionForm();
     saveSubmissionDraft();
     $('#skill-title').focus();
+  });
+  $('#cancel-skill-version').addEventListener('click', () => {
+    if (!confirm('取消后将清空本次更新表单，旧版本不受影响。确定取消？')) return;
+    $('#self-review-form').reset();
+    resubmittingResource = null;
+    restoredResubmissionId = null;
+    clearSubmissionDraft();
+    syncOtherEffectField();
+    syncVersionForm();
+    $('#skill-file-status').textContent = '请选择成果文件。';
   });
   $('#evidence-url').addEventListener('blur', (event) => { event.target.value = normalizeEvidence(event.target.value); saveSubmissionDraft(); });
   $('#skill-file').addEventListener('change', (event) => {
@@ -504,6 +547,7 @@
     if (!evidenceInput.value.trim()) issues.push({ message: '请粘贴“AI 对话的详细操作步骤（链接）”。', field: evidenceInput });
     if (!file && !resubmittingResource?.file_path) issues.push({ message: '请上传要提交的 Skill 文件。', field: $('#skill-file') });
     if (!tested.checked) issues.push({ message: '请勾选“我已实际试用”的提交确认。', field: tested });
+    if (resubmittingResource?.status === 'published' && !$('#skill-change-note').value.trim()) issues.push({ message: '请填写“本次更新说明”。', field: $('#skill-change-note') });
     if (!steps.value.trim() && !guideInEvidence.checked) issues.push({ message: '请填写“使用步骤”，或勾选“附件或 AI 对话中已包含完整操作步骤”。', field: guideInEvidence });
     if (issues.length) {
       // Persist the current form immediately: the user may submit before the
@@ -522,8 +566,9 @@
       submit.setAttribute('aria-busy', 'true');
       submit.textContent = '正在上传...';
       setStatus('成果上传中');
+      const submittingVersion = resubmittingResource?.status === 'published';
       if (resubmittingResource) {
-        await window.DfwsCloud.resubmitSkill(resubmittingResource, { title, description: buildResourceDescription(evidence), showcaseFile, visibilityScope: $('#skill-visibility').value }, file);
+        await window.DfwsCloud.resubmitSkill(resubmittingResource, { title, description: buildResourceDescription(evidence), showcaseFile, visibilityScope: $('#skill-visibility').value, changeNote: $('#skill-change-note').value, tested: tested.checked }, file);
       } else {
         await window.DfwsCloud.uploadSkill(partner, { title, description: buildResourceDescription(evidence), showcaseFile, visibilityScope: $('#skill-visibility').value }, file);
       }
@@ -550,9 +595,11 @@
       $('#skill-file-status').textContent = '成果已提交，等待审核';
       resubmittingResource = null;
       restoredResubmissionId = null;
+      $('#skill-change-note').value = '';
+      syncVersionForm();
       submit.textContent = '提交成果审核';
       clearSubmissionDraft();
-      $('#form-message').textContent = '成果已进入审核队列，审核通过后将出现在成果库中。';
+      $('#form-message').textContent = submittingVersion ? '新版本已提交审核，旧版继续供下载；审核通过后自动切换。' : '成果已进入审核队列，审核通过后将出现在成果库中。';
       setStatus('成果已提交');
       await loadResources();
     } catch (error) {
@@ -562,7 +609,7 @@
       resourceSubmitInFlight = false;
       submit.disabled = false;
       submit.removeAttribute('aria-busy');
-      submit.textContent = resubmittingResource ? '保存修改并重新提交' : '提交成果审核';
+      syncVersionForm();
     }
   });
   async function init() {

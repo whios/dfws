@@ -7,7 +7,7 @@
     <title>AI 应用成果中心 | AI 应用成果与资产管理平台</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="overrides.css" />
-    <link rel="stylesheet" href="self-review.css" />
+    <link rel="stylesheet" href="self-review.css?v=20261121" />
   </head>
   <body class="self-review-page">
     <section id="auth-gate" class="auth-gate is-hidden" aria-label="登录">
@@ -50,6 +50,11 @@
         <button class="partner-tab" type="button" data-partner-view="notifications">通知<span class="tab-count is-hidden" id="notification-unread-count">0</span></button>
       </nav>
       <form id="self-review-form" class="self-review-form partner-view" data-partner-panel="submit" novalidate>
+        <section id="skill-version-fields" class="self-review-section" hidden>
+          <h2>提交新版本</h2><p id="skill-version-hint" class="field-hint">审核期间旧版继续可用，通过后切换新版。</p>
+          <label>本次更新说明（必填）<textarea id="skill-change-note" maxlength="2000" placeholder="说明本次修改了什么、为什么更新，以及试用结果"></textarea></label>
+          <button id="cancel-skill-version" type="button" class="button secondary">取消本次更新，恢复普通提交</button>
+        </section>
         <section class="self-review-section">
           <div class="section-title"><h2>提交成果</h2><span>审核通过后可供同伴下载</span></div>
           <p class="self-review-tip">提交前请先在实际使用的 AI 工具中试用并调整内容，确认其他伙伴可以照着步骤独立完成。</p>
@@ -173,7 +178,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="supabase-config.js"></script>
-    <script src="cloud.js"></script>
-    <script src="self-review.js"></script>
+    <script src="cloud.js?v=20261121"></script>
+    <script src="self-review.js?v=20261121"></script>
   </body>
 </html>

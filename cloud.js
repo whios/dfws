@@ -483,9 +483,35 @@
     }
     return data;
   }
+  async function listSkillVersions() {
+    const { data, error } = await client.from('skill_versions').select('*').order('submitted_at', { ascending: false });
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') return { available: false, versions: [] };
+      throw error;
+    }
+    return { available: true, versions: data || [] };
+  }
+  async function reviewSkillVersion(id, decision, note) {
+    requireWritable();
+    if (!staff()) throw new Error('当前账号没有审核权限。');
+    const { error } = await client.rpc('review_skill_version', { target_version: id, decision, note });
+    if (error) throw error;
+  }
+  async function previewSkillVersion(version) {
+    const { data, error } = await client.storage.from('skill-files').createSignedUrl(version.payload.file_path, 60, { download: version.payload.file_name });
+    if (error) throw error;
+    const link = document.createElement('a');
+    link.href = data.signedUrl;
+    link.download = version.payload.file_name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
   async function resubmitSkill(resource, values, file) {
     requireWritable();
-    if (!profile || profile.role !== 'partner' || resource?.uploaded_by !== profile.id || resource.status !== 'rejected') throw new Error('只能修改本人被退回的成果。');
+    const newVersion = resource?.status === 'published';
+    if (!profile || profile.role !== 'partner' || resource?.uploaded_by !== profile.id || !['published','rejected'].includes(resource.status)) throw new Error('只能修改本人被退回或已发布的成果。');
+    if (newVersion && !String(values.changeNote || '').trim()) throw new Error('请填写本次更新说明。');
     if (file?.size > 200 * 1024 * 1024) throw new Error('单个文件最大支持 200MB。');
     if (values.showcaseFile?.size > 200 * 1024 * 1024) throw new Error('成果展示附件最大支持 200MB。');
     const bucket = client.storage.from('skill-files');
@@ -517,6 +543,15 @@
         showcaseName = values.showcaseFile.name;
       }
       const description = [values.description || '', showcasePath ? `成果展示附件路径：${showcasePath}` : '', showcaseName ? `成果展示附件名称：${showcaseName}` : ''].filter(Boolean).join('\n\n');
+      if (newVersion) {
+        const { data, error } = await client.rpc('submit_skill_version', {
+          target_resource: resource.id, expected_version: resource.version_number || 1,
+          changes: { title: values.title, description, visibility_scope: values.visibilityScope || 'all_partners', file_name: fileName, file_path: filePath, mime_type: mimeType, size_bytes: sizeBytes, tested: values.tested === true },
+          update_note: values.changeNote.trim()
+        });
+        if (error) throw error;
+        return data;
+      }
       const { data, error } = await client.from('skill_resources').update({
         title: values.title,
         description,
@@ -722,6 +757,7 @@
     if (error) throw error;
     return sendReviewEmailIfNeeded(id, before.status, values.status);
   }
+  window.DfwsVersions = { list: listSkillVersions, review: reviewSkillVersion, preview: previewSkillVersion };
   // 仅云端完全为空时允许执行一次初始迁移；后续会话一律以云端数据初始化。
   const canBootstrap = () => !localPreview && !readOnly && Boolean(profile) && staff() && !remoteHasData;
   window.DfwsCloud = { init, refreshState, writeState, queueSync, staff, personnelAdmin, brandAdmin, managementBrand, canBootstrap, listProfiles, listSkillPartners, listOperationAuditLogs, updateProfile, editPerson, setAccountStatus, deleteAsset, inviteMember, batchInviteMembers, organizationDirectory, saveOrganizationDirectory, inviteOrganizationMembers, sendPasswordSetupEmail, saveReview, submitSelfReview, listReviewSubmissions, listNotifications, markNotificationRead, listSkillResources, listSkillDownloads, uploadSkill, resubmitSkill, downloadSkill, downloadShowcaseFile, recordSkillAccess, listSkillRatingSummaries, rateSkill, listSkillEvaluationCampaigns, createSkillEvaluationCampaign, submitSkillEvaluation, reviewSkill, deleteSkillResource, editSkill, get role() { return profile?.role; }, get profile() { return profile; }, readOnly, localPreview };
