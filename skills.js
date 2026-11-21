@@ -15,6 +15,7 @@ function skills() {
   let partners = [];
   let downloads = [];
   let evaluationSummaries = [];
+  let versions = [];
   let editingSkillId = null;
   let syncDepartmentFilter = () => {};
   // Dashboard drill-down can preset the review filters for this one visit.
@@ -69,7 +70,8 @@ function skills() {
     const status = $('#skill-review-type').value;
     const filtered = resources.filter((resource) => {
       const text = `${resource.title || ''}${resource.file_name || ''}${resource.description || ''}${resource.partners?.owner_name || ''}${resource.partners?.brand || ''}`.toLowerCase();
-      return (!query || text.includes(query)) && (!brand || resource.partners?.brand === brand) && (!department || resource.partners?.department === department) && (!status || resource.status === status) && (!initialFilters.resourceId || resource.id === initialFilters.resourceId);
+      const hasPendingVersion = versions.some(v => v.resource_id === resource.id && v.status === 'pending');
+      return (!query || text.includes(query)) && (!brand || resource.partners?.brand === brand) && (!department || resource.partners?.department === department) && (!status || resource.status === status || (status === 'pending' && hasPendingVersion)) && (!initialFilters.resourceId || resource.id === initialFilters.resourceId);
     });
     const published = resources.filter((resource) => resource.status === 'published').length;
     const evaluationsByResource = new Map(evaluationSummaries.map((item) => [item.resource_id, item]));
@@ -126,6 +128,45 @@ function skills() {
       });
     }
     renderRanking();
+    let panel = $('#skill-version-queue');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'skill-version-queue';
+      view.querySelector('#skill-card-grid').before(panel);
+    }
+    const visibleIds = new Set(filtered.map(r => r.id));
+    const pendingVersions = versions.filter(v => v.status === 'pending' && visibleIds.has(v.resource_id));
+    if (pendingVersions.length) $('#skill-filter-count').append(` · 新版本待审核 ${pendingVersions.length} 项`);
+    panel.innerHTML = pendingVersions.map(v => {
+      const original = resources.find(r => r.id === v.resource_id);
+      if (!canManageResource(original)) return '';
+      return `<article class="card"><h3>新版本审核 · ${esc(v.payload.title)} · v${Number(v.version_number)}</h3><p>当前已发布 v${Number(original.version_number || 1)} 继续供下载，新版本不重复入账。</p><p><strong>更新说明：</strong>${esc(v.change_note)}</p><details><summary>查看新版本完整资料</summary><p style="white-space:pre-wrap">${esc(v.payload.description)}</p><p>文件：${esc(v.payload.file_name)}</p><button class="button secondary" data-version-preview="${v.id}">下载新版本文件核验</button></details><label>审核意见<textarea data-version-note="${v.id}" maxlength="2000"></textarea></label><button class="button primary" data-version-review="${v.id}" data-decision="published">通过并切换新版</button><button class="button secondary" data-version-review="${v.id}" data-decision="rejected">退回修改</button></article>`;
+    }).join('');
+    panel.querySelectorAll('article').forEach((card, index) => {
+      const version = pendingVersions.filter(v => canManageResource(resources.find(r => r.id === v.resource_id)))[index];
+      const p = document.createElement('p');
+      p.textContent = `新版本可见范围：${version.payload.visibility_scope === 'brand_only' ? '仅本品牌可见' : '全体伙伴可见'}`;
+      card.querySelector('details').before(p);
+    });
+    panel.onclick = async (event) => {
+      const id = event.target.dataset.versionReview || event.target.dataset.versionPreview;
+      const version = versions.find(v => v.id === id);
+      if (!version) return;
+      const resource = resources.find(r => r.id === version.resource_id);
+      try {
+        event.target.disabled = true;
+        if (event.target.dataset.versionPreview) {
+          await window.DfwsVersions.preview(version);
+        } else {
+          const note = panel.querySelector(`[data-version-note="${id}"]`).value.trim();
+          if (event.target.dataset.decision === 'rejected' && !note) throw new Error('退回前请填写修改意见。');
+          await window.DfwsVersions.review(id, event.target.dataset.decision, note);
+          toast('版本审核已保存');
+          await load();
+        }
+      } catch (error) { toast(error.message || '版本处理失败'); }
+      finally { event.target.disabled = false; }
+    };
   };
   const openEdit = (resource) => {
     editingSkillId = resource.id;
@@ -148,6 +189,7 @@ function skills() {
       const selectedDepartment = $('#skill-department').value;
       const selectedStatus = initialFilters.status ?? $('#skill-review-type').value;
       resources = data.resources;
+      versions = (await window.DfwsVersions.list()).versions;
       evaluationSummaries = await window.DfwsCloud.listSkillEvaluationCampaigns(resources).catch(() => []);
       partners = partnerRows || [];
       downloads = downloadRows || [];
