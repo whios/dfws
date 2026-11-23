@@ -312,3 +312,10 @@ a.nav-item { text-decoration: none; }
 .site-filing { color: var(--muted); font-size: 12px; padding: 28px 0 4px; text-align: center; }
 .site-filing a { color: inherit; text-decoration: none; }
 .site-filing a:hover { color: var(--teal); text-decoration: underline; }
+#skill-version-queue { display: grid; gap: 16px; min-width: 0; margin-bottom: 16px; }
+#skill-version-queue .card { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+#skill-version-queue .skill-version-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+#skill-version-queue a { color: var(--teal); text-decoration: underline; overflow-wrap: anywhere; }
+#skill-version-queue label { display: grid; gap: 6px; margin: 14px 0; }
+#skill-version-queue textarea { width: 100%; min-height: 80px; max-width: 100%; resize: vertical; font: inherit; border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; }
+.skill-version-actions { display: flex; flex-wrap: wrap; gap: 10px; }
