@@ -1,4 +1,16 @@
 // 管理端成果库以卡片呈现，便于在大量成果中快速判断来源、状态与可用性。
+function renderSkillVersionText(value) {
+  const text = String(value || '');
+  const escape = (part) => part.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+  let html = '', offset = 0;
+  for (const match of text.matchAll(/https?:\/\/[^\s<>"'）】]+/gi)) {
+    const url = match[0].replace(/[，。；、！？.,;!?]+$/u, '');
+    html += escape(text.slice(offset, match.index));
+    html += `<a href="${escape(url)}" target="_blank" rel="noopener noreferrer">${escape(url)}</a>`;
+    offset = match.index + url.length;
+  }
+  return html + escape(text.slice(offset));
+}
 function skills() {
   const view = $('#skills');
   const canReview = Boolean(window.DfwsCloud?.staff?.());
@@ -140,7 +152,7 @@ function skills() {
     panel.innerHTML = pendingVersions.map(v => {
       const original = resources.find(r => r.id === v.resource_id);
       if (!canManageResource(original)) return '';
-      return `<article class="card"><h3>新版本审核 · ${esc(v.payload.title)} · v${Number(v.version_number)}</h3><p>当前已发布 v${Number(original.version_number || 1)} 继续供下载，新版本不重复入账。</p><p><strong>更新说明：</strong>${esc(v.change_note)}</p><details><summary>查看新版本完整资料</summary><p style="white-space:pre-wrap">${esc(v.payload.description)}</p><p>文件：${esc(v.payload.file_name)}</p><button class="button secondary" data-version-preview="${v.id}">下载新版本文件核验</button></details><label>审核意见<textarea data-version-note="${v.id}" maxlength="2000"></textarea></label><button class="button primary" data-version-review="${v.id}" data-decision="published">通过并切换新版</button><button class="button secondary" data-version-review="${v.id}" data-decision="rejected">退回修改</button></article>`;
+      return `<article class="card"><h3>新版本审核 · ${esc(v.payload.title)} · v${Number(v.version_number)}</h3><p>当前已发布 v${Number(original.version_number || 1)} 继续供下载，新版本不重复入账。</p><p class="skill-version-text"><strong>更新说明：</strong>${renderSkillVersionText(v.change_note)}</p><details><summary>查看新版本完整资料</summary><p class="skill-version-text">${renderSkillVersionText(v.payload.description)}</p><p>文件：${esc(v.payload.file_name)}</p><button class="button secondary" data-version-preview="${v.id}">下载新版本文件核验</button></details><label>审核意见<textarea data-version-note="${v.id}" maxlength="2000"></textarea></label><div class="skill-version-actions"><button class="button primary" data-version-review="${v.id}" data-decision="published">通过并切换新版</button><button class="button secondary" data-version-review="${v.id}" data-decision="rejected">退回修改</button></div></article>`;
     }).join('');
     panel.querySelectorAll('article').forEach((card, index) => {
       const version = pendingVersions.filter(v => canManageResource(resources.find(r => r.id === v.resource_id)))[index];
